@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Game Interface</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            height: calc(100vh - 2rem);
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(180deg, #6c757d 0%, #495057 50%, #343a40 100%) !important;
+            border: 1px solid #212529 !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            color: #fff !important;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(180deg, #7d8489 0%, #5a6268 50%, #495057 100%) !important;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            border-color: white !important;
+        }
+
+        .btn-primary:focus {
+            border-color: white !important;
+        }
+
+        .btn-primary:not(:hover):not(:focus) {
+            border-color: #212529 !important;
+        }
+
+        .btn-primary:active {
+            background: linear-gradient(180deg, #495057 0%, #343a40 50%, #212529 100%) !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .progress {
+            background-color: #212529;
+            border-radius: 0;
+        }
+
+        .progress-bar {
+            border-radius: 0;
+        }
+
+        .card.border-dark {
+            border: 1px solid #1e1e1e;
+            border-top-color: #4a4a4a;
+            border-left-color: #4a4a4a;
+            border-bottom-color: #0a0a0a;
+            border-right-color: #0a0a0a;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        #battle-background {
+            position: relative;
+            overflow: hidden;
+            height: calc((100vh - 2rem) / 2);
+            min-height: 0;
+            flex-shrink: 0;
+            display: flex;
+        }
+
+        #battle-background .col-3,
+        #battle-background .col-9 {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+            box-sizing: border-box;
+        }
+
+        #battle-background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: var(--new-background, none);
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #battle-background>* {
+            position: relative;
+            z-index: 1;
+        }
+
+        #battle-background.fading::before {
+            opacity: 1;
+        }
+
+        #battle-background::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #000;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        #battle-background.blackout::after {
+            opacity: 1;
+        }
+
+        .enemy-cards-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            align-items: stretch;
+            height: 100%;
+            min-height: 0;
+            overflow: visible;
+        }
+
+        .enemy-cards-container::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .enemy-cards-container::-webkit-scrollbar-track {
+            background: #212529;
+            border-radius: 6px;
+        }
+
+        .enemy-cards-container::-webkit-scrollbar-thumb {
+            background: #495057;
+            border-radius: 6px;
+            border: 2px solid #212529;
+        }
+
+        .enemy-cards-container::-webkit-scrollbar-thumb:hover {
+            background: #5a6268;
+        }
+
+        .enemy-card-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .enemy-card-wrapper .card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #495057 #212529;
+        }
+
+        .enemy-card-wrapper .card .card-body {
+            flex: none;
+        }
+
+        .enemy-card-wrapper .card::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .enemy-card-wrapper .card::-webkit-scrollbar-track {
+            background: #212529;
+            border-radius: 4px;
+        }
+
+        .enemy-card-wrapper .card::-webkit-scrollbar-thumb {
+            background: #495057;
+            border-radius: 4px;
+            border: 2px solid #212529;
+        }
+
+        .enemy-card-wrapper .card::-webkit-scrollbar-thumb:hover {
+            background: #5a6268;
+        }
+
+        .enemy-card-wrapper .card-img-top {
+            object-fit: cover;
+            height: 200px;
+        }
+
+        .enemy-card-wrapper.fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+        }
+
+        .location-card {
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+
+        .location-card.show {
+            opacity: 1;
+        }
+
+        .message-log-row {
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid #495057;
+            border-radius: 4px;
+            flex-shrink: 0;
+            height: calc((100vh - 2rem) / 2 - 1rem);
+            min-height: 0;
+            max-height: calc((100vh - 2rem) / 2 - 1rem);
+            overflow: hidden;
+        }
+
+        .message-log-row .col-9,
+        .message-log-row .col-3 {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            max-height: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .message-log {
+            height: 100%;
+            max-height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            font-size: 0.9rem;
+            scrollbar-width: thin;
+            scrollbar-color: #495057 #212529;
+        }
+
+        .message-log::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .message-log::-webkit-scrollbar-track {
+            background: #212529;
+            border-radius: 4px;
+        }
+
+        .message-log::-webkit-scrollbar-thumb {
+            background: #495057;
+            border-radius: 4px;
+            border: 2px solid #212529;
+        }
+
+        .message-log::-webkit-scrollbar-thumb:hover {
+            background: #5a6268;
+        }
+
+        .message-log::-webkit-scrollbar-corner {
+            background: #212529;
+        }
+
+        /* Player card scrollable styling */
+        [data-card-id="player"] {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #495057 #212529;
+        }
+
+        [data-card-id="player"] .card-body {
+            flex-shrink: 0;
+        }
+
+        [data-card-id="player"] .player-inventory-list {
+            flex: 1;
+            min-height: 0;
+        }
+
+        [data-card-id="player"]::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        [data-card-id="player"]::-webkit-scrollbar-track {
+            background: #212529;
+            border-radius: 4px;
+        }
+
+        [data-card-id="player"]::-webkit-scrollbar-thumb {
+            background: #495057;
+            border-radius: 4px;
+            border: 2px solid #212529;
+        }
+
+        [data-card-id="player"]::-webkit-scrollbar-thumb:hover {
+            background: #5a6268;
+        }
+
+        [data-card-id="player"]::-webkit-scrollbar-corner {
+            background: #212529;
+        }
+
+        /* Player stats divider */
+        .player-stats-list .list-group-item {
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            border-bottom: 1px solid #3a3f44;
+            border-radius: 0;
+            padding-left: 1rem;
+        }
+
+        .player-stats-list .list-group-item:first-child {
+            border-top: 1px solid #3a3f44;
+        }
+
+        .player-stats-list .list-group-item:last-child {
+            border-bottom: 1px solid #3a3f44;
+        }
+
+        .player-inventory-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .player-inventory-list .inventory-item {
+            text-align: left;
+        }
+
+        .inventory-unequipped {
+            background: linear-gradient(180deg, #2c3035 0%, #1f2226 100%) !important;
+        }
+
+        .inventory-equipped {
+            background: linear-gradient(180deg, #198754 0%, #145a32 100%) !important;
+            border-color: #198754 !important;
+        }
+
+        .message-item {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid;
+            padding-left: 0.75rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .message-info {
+            border-left-color: #0dcaf0;
+            background-color: rgba(13, 202, 240, 0.1);
+        }
+
+        .message-success {
+            border-left-color: #198754;
+            background-color: rgba(25, 135, 84, 0.1);
+        }
+
+        .message-danger {
+            border-left-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        .message-warning {
+            border-left-color: #ffc107;
+            background-color: rgba(255, 193, 7, 0.1);
+        }
+
+        .message-timestamp {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-right: 0.5rem;
+        }
+
+        .merchant-count {
+            font-weight: bold;
+            margin-left: 0.5rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body class="bg-dark text-white">
+    <div class="container my-3">
+        <div class="row py-3 rounded-3 border border-dark border-2" id="battle-background"
+            style="background-image: url('img/cyber-city-hospital-street.jpeg'); background-size: cover; background-position: center;">
+            <div class="col-9">
+                <div class="enemy-cards-container" id="enemy-cards-container">
+                    <!-- Enemy cards will be generated dynamically -->
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="card bg-dark text-white border-dark pb-3" data-card-id="player">
+                    <img src="img/cyber-punk-player.jpeg" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <h5 class="card-title">Cyber Punk Player</h5>
+                        <p class="card-text mb-1">HP: <span class="hp-value">0</span>/<span
+                                class="max-hp-value">100</span></p>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-danger hp-bar" role="progressbar" style="width: 0%"
+                                aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="card-text mb-1">Credits: <span class="credits">0</span></p>
+
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <button class="btn btn-primary w-100 rounded-0 mb-3" id="flee-btn">Flee</button>
+                    </div>
+                    <h6 class="card-title mx-3">Stats</h6>
+                    <ul class="list-group list-group-flush player-stats-list">
+                        <li class="list-group-item bg-dark text-white border-secondary">Str: <span
+                                id="str-stat">1</span></li>
+                        <li class="list-group-item bg-dark text-white border-secondary">Defense: <span
+                                id="defense-stat">1</span></li>
+                        <li class="list-group-item bg-dark text-white border-secondary">Ranged: <span
+                                id="ranged-stat">1</span></li>
+                    </ul>
+
+                    <h6 class="card-title mx-3 mt-3">Inventory</h6>
+                    <div class="player-inventory-list list-group list-group-flush">
+                        <button id="inventory-bat"
+                            class="btn btn-primary inventory-item inventory-unequipped w-100 rounded-0" data-item="bat">
+                            Bat: <span id="bat-count">1</span>
+                        </button>
+                        <button id="inventory-stim-pack" class="btn btn-primary inventory-item w-100 rounded-0"
+                            data-item="stimPack">
+                            Stim Pack: <span id="stim-pack-count">0</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3 message-log-row p-3">
+            <div class="col-9 p-0 h-100">
+                <div class="message-log" id="message-log">
+                    <!-- Messages will be added here dynamically -->
+                </div>
+            </div>
+            <div class="col-3 pe-0">
+                <div class="card bg-dark text-white border-dark pb-3" data-card-id="cyber-info-card">
+                    <img src="img/cyber-doctor.jpeg" class="card-img-top" alt="Cyber Doctor" id="cyber-info-card-img">
+                    <div class="card-body">
+                        <h5 class="card-title" id="cyber-info-card-title">Cyber Doctor</h5>
+                    </div>
+                    <h6 class="card-title mx-3">Stats</h6>
+                    <ul class="list-group list-group-flush player-stats-list" id="cyber-info-card-stats">
+                        <li class="list-group-item bg-dark text-white border-secondary" id="cyber-info-card-stat-1">
+                            Healing: Automatic (Debt)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script>
+        // Configuration - number of enemies to spawn
+        const NUM_ENEMIES = 0; // Change this value to spawn different numbers of enemies
+        const LOCATION_ENCOUNTER_CHANCE = 0.5;
+
+        // Animation durations (must match CSS)
+        const FADE_OUT_DURATION = 500; // Duration in milliseconds (0.5s)
+
+        // Game state - track HP for each card
+        const gameState = {
+            player: { hp: 0, maxHp: 100, strength: 1, defense: 1, ranged: 1, credits: 0, totalHpHealed: 0 }
+        };
+        let currentBattleEnemyCount = 0;
+        let pendingDestination = null;
+        let previousLocation = null; // Track where we came from for street encounters
+        let currentZone = 'hospital';
+
+        const LOCATION_DISPLAY_NAMES = {
+            hospital: 'Hospital',
+            'cyber-market': 'Cyber Market',
+            streets: 'Streets'
+        };
+
+        const ZONE_CARD_RULES = {
+            streets: ['hospital', 'cyber-market'],
+            hospital: ['doctor', 'streets'],
+            'cyber-market': ['cyber-merchant', 'streets'],
+            battle: [],
+            travel: []
+        };
+
+        // Skill progression configuration
+        const SKILL_IMPROVEMENT = {
+            melee: 0.1,      // Strength improves by 0.1 per melee attack
+            ranged: 0.1,     // Ranged skill improves by 0.1 per ranged attack
+            defense: 0.01    // Defense improves by 0.01 per point of damage taken
+        };
+
+        // Initialize enemies in game state
+        function initializeEnemies() {
+            for (let i = 1; i <= NUM_ENEMIES; i++) {
+                const enemyId = `enemy${i}`;
+                gameState[enemyId] = { hp: 100, maxHp: 100 };
+            }
+        }
+
+        // Create and append enemy card to the container
+        function createEnemyCard(enemyId, enemyNumber) {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'enemy-card-wrapper';
+
+            wrapper.innerHTML = `
+                        <div class="card bg-dark text-white border-dark" data-card-id="${enemyId}">
+                            <img src="img/cyber-punk-1.jpeg" class="card-img-top" alt="...">
+                            <div class="card-body">
+                                <h5 class="card-title">Cyber Punk ${enemyNumber}</h5>
+                                <p class="card-text mb-1">HP: <span class="hp-value">100</span></p>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-success hp-bar" role="progressbar" style="width: 100%"
+                                        aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                <button class="btn btn-primary w-100 rounded-0 attack-btn" data-attack-type="melee"
+                                    data-target="${enemyId}">Melee Attack</button>
+                                <button class="btn btn-primary w-100 rounded-0 mb-3 attack-btn"
+                                    data-attack-type="ranged" data-target="${enemyId}">Ranged Attack</button>
+                            </div>
+                        </div>
+                    `;
+
+            container.appendChild(wrapper);
+            return wrapper;
+        }
+
+        // Create location card (hospital, shop, etc.)
+        function createLocationCard(locationId, locationName, imagePath) {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+            const existing = container.querySelector(`[data-location-id="${locationId}"]`);
+            if (existing) {
+                existing.remove();
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'enemy-card-wrapper location-card';
+            wrapper.setAttribute('data-location-id', locationId);
+
+            wrapper.style.display = 'none';
+
+            wrapper.innerHTML = `
+                <div class="card bg-dark text-white border-dark" data-card-id="${locationId}">
+                    <img src="${imagePath}" class="card-img-top" alt="${locationName}">
+                    <div class="card-body">
+                        <h5 class="card-title">${locationName}</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 location-go-btn" data-location-id="${locationId}">Go</button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(wrapper);
+            updateLocationCardsVisibility();
+            return wrapper;
+        }
+
+        function getLocationDisplayName(locationId) {
+            if (LOCATION_DISPLAY_NAMES[locationId]) {
+                return LOCATION_DISPLAY_NAMES[locationId];
+            }
+
+            return locationId
+                .split('-')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        function maybeTriggerEncounter(locationId) {
+            // Check for random encounters (except when already in battle)
+            if (currentZone === 'battle') {
+                return false;
+            }
+
+            // Streets can have encounters too - store previous location for return after flee/victory
+            if (Math.random() < LOCATION_ENCOUNTER_CHANCE) {
+                const locationName = getLocationDisplayName(locationId);
+                const enemyCount = Math.floor(Math.random() * 3) + 1;
+
+                if (locationId === 'streets') {
+                    addMessage(`Ambush on the streets! ${enemyCount} enemy${enemyCount > 1 ? 's' : ''} appear!`, 'danger');
+                    // Store where we came from for fleeing
+                    previousLocation = currentZone !== 'streets' && currentZone !== 'battle' ? currentZone : 'hospital';
+                    // After victory, we want to arrive at streets
+                    pendingDestination = 'streets';
+                } else {
+                    addMessage(`Ambush on your way to the ${locationName}!`, 'danger');
+                    pendingDestination = locationId;
+                    previousLocation = currentZone;
+                }
+
+                spawnRandomEnemies(enemyCount);
+                return true;
+            }
+
+            if (locationId !== 'streets') {
+                pendingDestination = null;
+            }
+            return false;
+        }
+
+        function arriveAtLocation(locationId) {
+            currentZone = locationId;
+
+            // Determine which cards should be visible in the new location
+            const allowedCards = ZONE_CARD_RULES[locationId] || [];
+
+            // Collect all location cards to fade out (remove cards that shouldn't be in the new location)
+            const allLocationCards = document.querySelectorAll('.location-card');
+            const cardsToRemove = [];
+
+            allLocationCards.forEach(card => {
+                const cardLocationId = card.getAttribute('data-location-id');
+                // Remove location cards that aren't allowed in the new location
+                // Also remove any location navigation cards (hospital, cyber-market) as they'll be replaced
+                if (cardLocationId === 'hospital' || cardLocationId === 'cyber-market') {
+                    // Always remove navigation location cards when arriving at a new location
+                    cardsToRemove.push(card);
+                } else if (!allowedCards.includes(cardLocationId)) {
+                    // Remove cards that aren't in the allowed list for this location
+                    cardsToRemove.push(card);
+                }
+            });
+
+            // If there are cards to remove, fade them out first
+            if (cardsToRemove.length > 0) {
+                cardsToRemove.forEach(card => {
+                    fadeOutAndRemove(card);
+                });
+
+                // Wait for fade-out to complete before creating new cards
+                setTimeout(() => {
+                    createLocationCards(locationId);
+                    // Update info card after location change
+                    updateCyberBatCard();
+                }, FADE_OUT_DURATION);
+            } else {
+                // No cards to remove, create new cards immediately
+                createLocationCards(locationId);
+                // Update info card after location change
+                updateCyberBatCard();
+            }
+        }
+
+        // Helper function to create location-specific cards
+        function createLocationCards(locationId) {
+            if (locationId === 'hospital') {
+                addMessage('You enter the hospital...', 'info');
+                changeBackground('img/cyber-city-hospital-street.jpeg');
+                createDoctorCard();
+                createStreetsCard();
+                // Doctor talks to the player when arriving at hospital
+                setTimeout(() => {
+                    doctorTalksToPlayer();
+                }, 500);
+            } else if (locationId === 'cyber-market') {
+                addMessage('You enter the Cyber Market...', 'info');
+                changeBackground('img/cyber-market.jpeg');
+                createCyberMerchantCard();
+                createStreetsCard();
+            } else if (locationId === 'streets') {
+                addMessage('You arrive at the streets...', 'info');
+                changeBackground('img/cyber-city-street.jpeg');
+                createLocationCard('hospital', 'Hospital', 'img/cyber-city-hospital-street.jpeg');
+                createLocationCard('cyber-market', 'Cyber Market', 'img/cyber-market.jpeg');
+            } else {
+                addMessage(`You arrive at the ${getLocationDisplayName(locationId)}.`, 'info');
+            }
+
+            updateLocationCardsVisibility();
+
+            // Update info card visibility based on location
+            updateCyberBatCard();
+        }
+
+        // Show/hide location cards based on current zone and battle status
+        function updateLocationCardsVisibility() {
+            const locationCards = document.querySelectorAll('.location-card');
+            const hasActiveEnemies = checkForActiveEnemies();
+            const allowedCards = ZONE_CARD_RULES[currentZone] || [];
+
+            locationCards.forEach(card => {
+                const locationId = card.getAttribute('data-location-id');
+                const shouldShow = !hasActiveEnemies && allowedCards.includes(locationId);
+
+                if (shouldShow) {
+                    if (card.style.display !== 'flex') {
+                        card.style.display = 'flex';
+                        requestAnimationFrame(() => {
+                            card.classList.add('show');
+                        });
+                    }
+                } else {
+                    card.classList.remove('show');
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Check if there are any active enemies
+        function checkForActiveEnemies() {
+            // Check all enemies in gameState dynamically (works with random encounters)
+            for (const key in gameState) {
+                if (key.startsWith('enemy') && gameState[key].hp > 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Update flee button visibility based on battle state
+        function updateFleeButtonVisibility() {
+            const fleeBtn = document.getElementById('flee-btn');
+            if (!fleeBtn) return;
+
+            const hasActiveEnemies = checkForActiveEnemies();
+
+            if (hasActiveEnemies) {
+                // Show flee button when in battle
+                fleeBtn.style.display = 'block';
+                fleeBtn.disabled = false;
+            } else {
+                // Hide flee button when not in battle
+                fleeBtn.style.display = 'none';
+                fleeBtn.disabled = true;
+            }
+        }
+
+        // Generic function to fade out and remove an element from the DOM
+        function fadeOutAndRemove(element, callback) {
+            if (!element) {
+                if (callback) callback();
+                return;
+            }
+
+            // Add fade-out class to trigger animation
+            element.classList.add('fade-out');
+
+            // Remove from DOM after fade-out animation completes
+            setTimeout(() => {
+                element.remove();
+                if (callback) callback();
+            }, FADE_OUT_DURATION);
+        }
+
+        // Remove elements from DOM and call callback when complete
+        function removeElementsFromDOM(elements, callback) {
+            elements.forEach(card => {
+                card.remove();
+            });
+
+            // Wait for DOM to update before calling callback
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    callback();
+                });
+            });
+        }
+
+        // Show location cards with fade-in animation
+        function showLocationCards() {
+            updateLocationCardsVisibility();
+        }
+
+        // Fade out and remove a single enemy card from the DOM
+        function fadeOutAndRemoveEnemy(enemyId) {
+            const enemyCard = document.querySelector(`[data-card-id="${enemyId}"]`);
+            if (!enemyCard) return;
+
+            const enemyCardWrapper = enemyCard.closest('.enemy-card-wrapper');
+            if (!enemyCardWrapper) return;
+
+            // Use the generic fade-out function
+            fadeOutAndRemove(enemyCardWrapper);
+        }
+
+        // Spawn all enemies
+        function spawnEnemies(skipDoctorDialogue = false) {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+
+            // Clear container in case we're respawning
+            container.innerHTML = '';
+
+            currentBattleEnemyCount = NUM_ENEMIES;
+            pendingDestination = null;
+            currentZone = 'hospital';
+
+            // Initialize enemies in game state
+            initializeEnemies();
+
+            // Create enemy cards
+            for (let i = 1; i <= NUM_ENEMIES; i++) {
+                const enemyId = `enemy${i}`;
+                createEnemyCard(enemyId, i);
+            }
+
+            // Start at the hospital
+            changeBackground('img/cyber-city-hospital-street.jpeg');
+            createDoctorCard();
+            createStreetsCard();
+
+            // Update location cards visibility based on battle status
+            updateLocationCardsVisibility();
+
+            // Welcome message at hospital
+            if (NUM_ENEMIES > 0) {
+                addMessage(`Battle begins! ${NUM_ENEMIES} enemy${NUM_ENEMIES > 1 ? 's' : ''} appear!`, 'info');
+            } else {
+                if (!skipDoctorDialogue) {
+                    addMessage('You arrive at the hospital...', 'info');
+                    // Doctor talks to the player
+                    setTimeout(() => {
+                        doctorTalksToPlayer();
+                    }, 500);
+                }
+            }
+
+            // Update flee button visibility based on battle state
+            updateFleeButtonVisibility();
+        }
+
+        // Message system functions
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString();
+        }
+
+        function addMessage(text, type = 'info') {
+            const messageLog = document.getElementById('message-log');
+            if (!messageLog) return;
+
+            const messageItem = document.createElement('div');
+            messageItem.className = `message-item message-${type}`;
+
+            const timestamp = document.createElement('span');
+            timestamp.className = 'message-timestamp';
+            timestamp.textContent = `[${getCurrentTime()}]`;
+
+            const messageText = document.createElement('span');
+            messageText.textContent = text;
+
+            messageItem.appendChild(timestamp);
+            messageItem.appendChild(messageText);
+
+            // Prepend message at the top (newest messages first)
+            messageLog.insertBefore(messageItem, messageLog.firstChild);
+
+            // Auto-scroll to top to show newest message
+            messageLog.scrollTop = 0;
+
+            // Limit messages to prevent memory issues (keep first 50, remove oldest from bottom)
+            const messages = messageLog.querySelectorAll('.message-item');
+            if (messages.length > 50) {
+                messages[messages.length - 1].remove();
+            }
+        }
+
+        function clearMessages() {
+            const messageLog = document.getElementById('message-log');
+            if (messageLog) {
+                messageLog.innerHTML = '';
+            }
+        }
+
+        // Attack damage values
+        const attackDamage = {
+            melee: { min: 15, max: 25 },
+            ranged: { min: 10, max: 20 }
+        };
+
+        // Player inventory and weapon bonuses
+        const playerInventory = {
+            bat: 0,
+            stimPack: 0
+        };
+
+        // Merchant inventory
+        const merchantInventory = {
+            bat: 0,
+            stimPack: 10
+        };
+
+        const equippedWeapons = {
+            bat: false
+        };
+
+        const weaponDamageBonus = {
+            bat: 5
+        };
+
+        // Enemy attack damage values
+        const enemyAttackDamage = {
+            min: 8,
+            max: 15
+        };
+
+        // Calculate melee weapon bonus from inventory
+        function getMeleeWeaponBonus() {
+            let bonus = 0;
+
+            if (playerInventory.bat && playerInventory.bat > 0 && isWeaponEquipped('bat')) {
+                bonus += weaponDamageBonus.bat;
+            }
+
+            return bonus;
+        }
+
+        // Calculate random damage
+        function calculateDamage(attackType) {
+            const damage = attackDamage[attackType];
+            let baseDamage = Math.floor(Math.random() * (damage.max - damage.min + 1)) + damage.min;
+
+            // Add player strength and weapon bonus to melee attacks
+            if (attackType === 'melee') {
+                baseDamage += gameState.player.strength + getMeleeWeaponBonus();
+            }
+            // Add player ranged skill to ranged attacks
+            else if (attackType === 'ranged') {
+                baseDamage += gameState.player.ranged;
+            }
+
+            return baseDamage;
+        }
+
+        function isWeaponEquipped(weapon) {
+            return !!equippedWeapons[weapon];
+        }
+
+        function toggleWeaponEquip(weapon) {
+            if (!playerInventory[weapon]) {
+                return;
+            }
+
+            equippedWeapons[weapon] = !equippedWeapons[weapon];
+            updateInventoryUI();
+
+            const action = equippedWeapons[weapon] ? 'equipped' : 'unequipped';
+            addMessage(`You ${action} the ${weapon}.`, 'info');
+        }
+
+        function updateInventoryUI() {
+            const batItem = document.getElementById('inventory-bat');
+            const batCount = document.getElementById('bat-count');
+            const batCountValue = playerInventory.bat ?? 0;
+
+            if (batCount) {
+                batCount.textContent = batCountValue;
+            }
+
+            // Automatically unequip bat if count reaches 0
+            if (batCountValue <= 0 && isWeaponEquipped('bat')) {
+                equippedWeapons.bat = false;
+                addMessage('You unequipped the bat.', 'info');
+            }
+
+            if (batItem) {
+                const equipped = isWeaponEquipped('bat');
+                batItem.classList.toggle('inventory-equipped', equipped);
+                batItem.classList.toggle('inventory-unequipped', !equipped);
+
+                // Hide the button if count is 0, show it if count is greater than 0
+                if (batCountValue <= 0) {
+                    batItem.style.display = 'none';
+                } else {
+                    batItem.style.display = 'block';
+                }
+            }
+
+            const stimPackItem = document.getElementById('inventory-stim-pack');
+            const stimPackCount = document.getElementById('stim-pack-count');
+            const stimPackCountValue = playerInventory.stimPack ?? 0;
+
+            if (stimPackCount) {
+                stimPackCount.textContent = stimPackCountValue;
+            }
+
+            if (stimPackItem) {
+                // Hide the button if count is 0, show it if count is greater than 0
+                if (stimPackCountValue <= 0) {
+                    stimPackItem.style.display = 'none';
+                } else {
+                    stimPackItem.style.display = 'block';
+                }
+            }
+
+            // Update Cyber Bat card visibility
+            updateCyberBatCard();
+        }
+
+        // Update info card to show different items/characters (Cyber Doctor, Cyber Bat, etc.)
+        function updateCyberBatCard() {
+            const infoCard = document.querySelector('[data-card-id="cyber-info-card"]');
+            if (!infoCard) return;
+
+            const batCount = playerInventory.bat ?? 0;
+            const isBatEquipped = isWeaponEquipped('bat') && batCount > 0;
+            const isAtHospital = currentZone === 'hospital';
+
+            // Show Cyber Bat if equipped (anywhere)
+            if (isBatEquipped) {
+                // Show Cyber Bat
+                const img = document.getElementById('cyber-info-card-img');
+                const title = document.getElementById('cyber-info-card-title');
+                const statsList = document.getElementById('cyber-info-card-stats');
+
+                if (img) {
+                    img.src = 'img/cyber-bat.jpeg';
+                    img.alt = 'Cyber Bat';
+                }
+                if (title) title.textContent = 'Cyber Bat';
+
+                if (statsList) {
+                    statsList.innerHTML = '<li class="list-group-item bg-dark text-white border-secondary">Melee Damage: <span id="bat-damage-stat">+5</span></li>';
+                }
+
+                infoCard.style.display = 'block';
+            } else if (isAtHospital) {
+                // Show Cyber Doctor only when at hospital
+                const img = document.getElementById('cyber-info-card-img');
+                const title = document.getElementById('cyber-info-card-title');
+                const statsList = document.getElementById('cyber-info-card-stats');
+
+                if (img) {
+                    img.src = 'img/cyber-doctor.jpeg';
+                    img.alt = 'Cyber Doctor';
+                }
+                if (title) title.textContent = 'Cyber Doctor';
+
+                if (statsList) {
+                    statsList.innerHTML = '<li class="list-group-item bg-dark text-white border-secondary">Healing: Automatic (Debt)</li>';
+                }
+
+                infoCard.style.display = 'block';
+            } else {
+                // Hide card when not at hospital and bat is not equipped
+                infoCard.style.display = 'none';
+            }
+        }
+
+        // Update player stats display
+        function updatePlayerStats() {
+            const strStat = document.getElementById('str-stat');
+            const defenseStat = document.getElementById('defense-stat');
+            const rangedStat = document.getElementById('ranged-stat');
+
+            if (strStat) {
+                strStat.textContent = Math.round(gameState.player.strength);
+            }
+
+            if (defenseStat) {
+                defenseStat.textContent = Math.round(gameState.player.defense);
+            }
+
+            if (rangedStat) {
+                rangedStat.textContent = Math.round(gameState.player.ranged);
+            }
+        }
+
+        // Improve player stat based on action
+        function improveStat(statName, improvement, actionDescription) {
+            const oldValue = gameState.player[statName];
+            gameState.player[statName] += improvement;
+            updatePlayerStats();
+
+            // Check if stat increased to the next whole number level
+            const oldRounded = Math.round(oldValue);
+            const newRounded = Math.round(gameState.player[statName]);
+
+            if (newRounded > oldRounded) {
+                const statDisplayName = statName.charAt(0).toUpperCase() + statName.slice(1);
+                addMessage(`${statDisplayName} leveled up to ${newRounded}!`, 'success');
+            }
+        }
+
+        // Update HP display and progress bar
+        function updateCardHP(cardId) {
+            const card = document.querySelector(`[data-card-id="${cardId}"]`);
+            if (!card) return;
+
+            const state = gameState[cardId];
+            const hpValue = card.querySelector('.hp-value');
+            const maxHpValue = card.querySelector('.max-hp-value');
+            const hpBar = card.querySelector('.hp-bar');
+
+            if (hpValue) {
+                hpValue.textContent = Math.max(0, Math.round(state.hp));
+            }
+
+            if (maxHpValue) {
+                maxHpValue.textContent = Math.round(state.maxHp);
+            }
+
+            if (hpBar) {
+                const percentage = (state.hp / state.maxHp) * 100;
+                hpBar.style.width = `${percentage}%`;
+                hpBar.setAttribute('aria-valuenow', state.hp);
+                hpBar.setAttribute('aria-valuemax', state.maxHp);
+
+                // Change color based on HP level
+                if (percentage > 60) {
+                    hpBar.className = 'progress-bar bg-success hp-bar';
+                } else if (percentage > 30) {
+                    hpBar.className = 'progress-bar bg-warning hp-bar';
+                } else {
+                    hpBar.className = 'progress-bar bg-danger hp-bar';
+                }
+            }
+
+            // Check if card is defeated
+            if (state.hp <= 0) {
+                card.style.opacity = '0.5';
+                const buttons = card.querySelectorAll('.attack-btn');
+                buttons.forEach(btn => btn.disabled = true);
+            } else {
+                // Restore opacity if card is not defeated
+                card.style.opacity = '1';
+            }
+
+            // If player dies, disable all attack buttons
+            if (cardId === 'player' && state.hp <= 0) {
+                const allAttackButtons = document.querySelectorAll('.attack-btn');
+                allAttackButtons.forEach(btn => btn.disabled = true);
+            }
+        }
+
+        // Enemy attacks player
+        function enemyAttackPlayer(attackerId) {
+            const player = gameState.player;
+            if (!player || player.hp <= 0) return;
+
+            let rawDamage = Math.floor(Math.random() * (enemyAttackDamage.max - enemyAttackDamage.min + 1)) + enemyAttackDamage.min;
+
+            // Factor in player defense (reduce damage, minimum 1 damage)
+            const damage = Math.max(1, rawDamage - player.defense);
+            const defenseReduction = rawDamage - damage;
+
+            player.hp = Math.max(0, player.hp - damage);
+
+            // Improve defense based on damage taken (learn from getting hit)
+            if (damage > 0) {
+                improveStat('defense', SKILL_IMPROVEMENT.defense * damage, 'taking damage');
+            }
+
+            // Visual feedback - flash the player card
+            const playerCard = document.querySelector('[data-card-id="player"]');
+            if (playerCard) {
+                playerCard.style.transition = 'all 0.2s';
+                playerCard.style.transform = 'scale(0.95)';
+                playerCard.style.filter = 'brightness(1.5)';
+                setTimeout(() => {
+                    playerCard.style.transform = 'scale(1)';
+                    playerCard.style.filter = 'brightness(1)';
+                }, 200);
+            }
+
+            updateCardHP('player');
+
+            // Get enemy name
+            const enemyCard = document.querySelector(`[data-card-id="${attackerId}"]`);
+            const enemyName = enemyCard ? enemyCard.querySelector('.card-title').textContent : attackerId;
+
+            if (defenseReduction > 0) {
+                addMessage(`${enemyName} attacks! ${Math.round(rawDamage)} damage, ${Math.round(defenseReduction)} blocked by defense. You take ${Math.round(damage)} damage! (HP: ${Math.round(player.hp)}/${Math.round(player.maxHp)})`, 'danger');
+            } else {
+                addMessage(`${enemyName} attacks! You take ${Math.round(damage)} damage! (HP: ${player.hp}/${player.maxHp})`, 'danger');
+            }
+
+            // Check if player is defeated
+            if (player.hp <= 0) {
+                checkPlayerDefeat();
+            }
+        }
+
+        // Perform attack
+        function performAttack(attackType, targetId) {
+            // Check if player is dead - if so, no attacks allowed
+            if (gameState.player.hp <= 0) {
+                addMessage('You cannot attack - you are defeated!', 'warning');
+                return;
+            }
+
+            const target = gameState[targetId];
+            if (!target || target.hp <= 0) {
+                addMessage('Target is already defeated!', 'warning');
+                return;
+            }
+
+            const damage = calculateDamage(attackType);
+            const previousHp = target.hp;
+            target.hp = Math.max(0, target.hp - damage);
+
+            // Improve stats based on action
+            if (attackType === 'melee') {
+                improveStat('strength', SKILL_IMPROVEMENT.melee, 'melee attack');
+            } else if (attackType === 'ranged') {
+                improveStat('ranged', SKILL_IMPROVEMENT.ranged, 'ranged attack');
+            }
+
+            // Visual feedback - flash the card
+            const card = document.querySelector(`[data-card-id="${targetId}"]`);
+            if (card) {
+                card.style.transition = 'all 0.2s';
+                card.style.transform = 'scale(0.95)';
+                card.style.filter = 'brightness(1.5)';
+                setTimeout(() => {
+                    card.style.transform = 'scale(1)';
+                    card.style.filter = 'brightness(1)';
+                }, 200);
+            }
+
+            updateCardHP(targetId);
+
+            // Get target name
+            const targetCard = document.querySelector(`[data-card-id="${targetId}"]`);
+            const targetName = targetCard ? targetCard.querySelector('.card-title').textContent : targetId;
+            const attackTypeDisplay = attackType.charAt(0).toUpperCase() + attackType.slice(1);
+
+            addMessage(`${attackTypeDisplay} attack on ${targetName}! ${Math.round(damage)} damage dealt! (${targetName} HP: ${Math.round(target.hp)}/${Math.round(target.maxHp)})`, 'success');
+
+            // Check if enemy is defeated
+            if (target.hp <= 0 && targetId.startsWith('enemy')) {
+                setTimeout(() => {
+                    addMessage(`${targetName} has been defeated!`, 'success');
+                    // Fade out and remove the defeated enemy card
+                    fadeOutAndRemoveEnemy(targetId);
+                    // Check if all enemies are defeated
+                    if (checkBattleVictory()) {
+                        setTimeout(() => {
+                            handleVictory();
+                        }, FADE_OUT_DURATION * 2);
+                    } else {
+                        // Update location cards visibility after each enemy defeat (but not on victory)
+                        updateLocationCardsVisibility();
+                    }
+                }, 300);
+            }
+
+            // Enemy counterattack if they're still alive
+            if (target.hp > 0 && targetId.startsWith('enemy')) {
+                setTimeout(() => {
+                    enemyAttackPlayer(targetId);
+                }, 400); // Small delay for better UX
+            }
+        }
+
+        // Check if all enemies are defeated (victory condition)
+        // Returns true if all enemies are defeated, false otherwise
+        function checkBattleVictory() {
+            // Check all enemies in gameState dynamically (works with random encounters)
+            for (const key in gameState) {
+                if (key.startsWith('enemy') && gameState[key].hp > 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Handle victory - disable buttons and show location cards
+        function handleVictory() {
+            addMessage('VICTORY! All enemies defeated!', 'success');
+
+            if (currentBattleEnemyCount > 0) {
+                playerInventory.bat = (playerInventory.bat || 0) + currentBattleEnemyCount;
+                updateInventoryUI();
+                const plural = currentBattleEnemyCount === 1 ? '' : 's';
+                addMessage(`You recover ${currentBattleEnemyCount} bat${plural} from the defeated enemies.`, 'success');
+                currentBattleEnemyCount = 0;
+            }
+
+            // Disable all attack buttons
+            const allAttackButtons = document.querySelectorAll('.attack-btn');
+            allAttackButtons.forEach(btn => btn.disabled = true);
+
+            // Disable flee button
+            const fleeBtn = document.getElementById('flee-btn');
+            if (fleeBtn) {
+                fleeBtn.disabled = true;
+            }
+
+            // Wait for the last enemy card to finish fading out, then show location cards
+            // (enemies are removed individually, so we wait for the fade-out duration)
+            setTimeout(() => {
+                // Update flee button visibility (hide it since battle is over)
+                updateFleeButtonVisibility();
+
+                if (pendingDestination) {
+                    const destination = pendingDestination;
+                    pendingDestination = null;
+
+                    if (destination === 'streets') {
+                        // Arrive at streets after victory
+                        currentZone = 'streets';
+                        changeBackground('img/cyber-city-street.jpeg');
+                        createLocationCard('hospital', 'Hospital', 'img/cyber-city-hospital-street.jpeg');
+                        createLocationCard('cyber-market', 'Cyber Market', 'img/cyber-market.jpeg');
+                        updateLocationCardsVisibility();
+                        updateCyberBatCard(); // Update info card visibility
+                        addMessage('You arrive at the streets after the battle.', 'info');
+                    } else {
+                        // Arrive at the destination location
+                        arriveAtLocation(destination);
+                    }
+                } else if (currentZone === 'battle') {
+                    // Fallback: if no destination, return to streets
+                    currentZone = 'streets';
+                    changeBackground('img/cyber-city-street.jpeg');
+                    createLocationCard('hospital', 'Hospital', 'img/cyber-city-hospital-street.jpeg');
+                    createLocationCard('cyber-market', 'Cyber Market', 'img/cyber-market.jpeg');
+                    updateLocationCardsVisibility();
+                    updateCyberBatCard(); // Update info card visibility
+                    addMessage('You arrive at the streets after the battle.', 'info');
+                } else {
+                    showLocationCards();
+                }
+            }, FADE_OUT_DURATION);
+        }
+
+        // Fade to black
+        function fadeToBlack(callback) {
+            const battleBackground = document.getElementById('battle-background');
+            if (!battleBackground) {
+                if (callback) callback();
+                return;
+            }
+
+            // Add blackout class to fade to black
+            battleBackground.classList.add('blackout');
+
+            // Wait for fade to complete, then call callback
+            setTimeout(() => {
+                if (callback) callback();
+            }, 1000); // Match CSS transition duration
+        }
+
+        // Fade from black
+        function fadeFromBlack() {
+            const battleBackground = document.getElementById('battle-background');
+            if (!battleBackground) return;
+
+            // Remove blackout class to fade from black
+            battleBackground.classList.remove('blackout');
+        }
+
+        // Check if player is defeated (defeat condition)
+        function checkPlayerDefeat() {
+            if (gameState.player.hp <= 0) {
+                setTimeout(() => {
+                    addMessage('DEFEAT! You have been defeated...', 'danger');
+
+                    // Disable all attack buttons immediately
+                    const allAttackButtons = document.querySelectorAll('.attack-btn');
+                    allAttackButtons.forEach(btn => btn.disabled = true);
+
+                    // Disable flee button
+                    const fleeBtn = document.getElementById('flee-btn');
+                    if (fleeBtn) {
+                        fleeBtn.disabled = true;
+                    }
+
+                    // Update flee button visibility (hide it since battle is over)
+                    updateFleeButtonVisibility();
+
+                    // Player loses all gear when defeated (before fade to black)
+                    const lostBats = playerInventory.bat || 0;
+                    const lostStimPacks = playerInventory.stimPack || 0;
+
+                    // Store lost gear message to show after fade from black
+                    let lostGearMessage = null;
+                    if (lostBats > 0 || lostStimPacks > 0) {
+                        const lostItems = [];
+                        if (lostBats > 0) lostItems.push(`${lostBats} bat${lostBats > 1 ? 's' : ''}`);
+                        if (lostStimPacks > 0) lostItems.push(`${lostStimPacks} stim pack${lostStimPacks > 1 ? 's' : ''}`);
+                        lostGearMessage = `You lost your gear: ${lostItems.join(', ')}.`;
+                    }
+
+                    // Fade to black
+                    fadeToBlack(() => {
+                        // Clear all enemies after fade to black
+                        const container = document.getElementById('enemy-cards-container');
+                        if (container) {
+                            container.innerHTML = '';
+                        }
+
+                        // Remove enemies from game state
+                        for (const key in gameState) {
+                            if (key.startsWith('enemy')) {
+                                delete gameState[key];
+                            }
+                        }
+
+                        // Clear all inventory
+                        playerInventory.bat = 0;
+                        playerInventory.stimPack = 0;
+
+                        // Unequip all weapons
+                        equippedWeapons.bat = false;
+
+                        // Update inventory UI (this will hide the Cyber Bat card and inventory items)
+                        updateInventoryUI();
+
+                        // Reset player card opacity
+                        const playerCard = document.querySelector('[data-card-id="player"]');
+                        if (playerCard) {
+                            playerCard.style.opacity = '1';
+                        }
+
+                        // Change background to hospital (while blacked out)
+                        const battleBackground = document.getElementById('battle-background');
+                        if (battleBackground) {
+                            battleBackground.style.backgroundImage = 'url(\'img/cyber-city-hospital-street.jpeg\')';
+                        }
+
+                        // Bring player to hospital
+                        currentZone = 'hospital';
+                        previousLocation = null;
+                        pendingDestination = null;
+
+                        // Create hospital location cards (will be shown after fade from black)
+                        createDoctorCard();
+                        createStreetsCard();
+                        // Hide location cards during blackout
+                        updateLocationCardsVisibility();
+                        const locationCards = document.querySelectorAll('.location-card');
+                        locationCards.forEach(card => {
+                            card.style.opacity = '0';
+                        });
+
+                        // Wait a few seconds in black, then fade from black
+                        setTimeout(() => {
+                            fadeFromBlack();
+
+                            // Show location cards after fade from black completes
+                            setTimeout(() => {
+                                // Restore location cards visibility
+                                updateLocationCardsVisibility();
+                                locationCards.forEach(card => {
+                                    card.style.opacity = '';
+                                });
+
+                                addMessage('You wake up in the hospital. Your health has been restored.', 'success');
+                                // Automatically heal and add to debt (charge for revival healing)
+                                const player = gameState.player;
+                                const healCost = 10;
+                                player.credits -= healCost;
+                                player.hp = player.maxHp;
+                                updateCardHP('player');
+                                updateCreditsDisplay();
+                                const debt = Math.abs(player.credits);
+                                addMessage(`The hospital revives you and restores your health. You now owe ${debt} credits to the hospital.`, 'info');
+
+                                // Show lost gear message if any gear was lost
+                                if (lostGearMessage) {
+                                    setTimeout(() => {
+                                        addMessage(lostGearMessage, 'warning');
+                                    }, 300);
+                                }
+
+                                // Doctor talks to the player after revival
+                                setTimeout(() => {
+                                    doctorTalksToPlayer();
+                                }, 800);
+                            }, 1000); // Wait for fade from black transition to complete
+                        }, 2000); // Wait 2 seconds in black before fading back
+                    });
+                }, 300);
+            }
+        }
+
+        // Change background image with fade effect
+        function changeBackground(newImageUrl) {
+            const battleBackground = document.getElementById('battle-background');
+            if (!battleBackground) return;
+
+            // Set the new background on the ::before pseudo-element via CSS variable
+            battleBackground.style.setProperty('--new-background', `url('${newImageUrl}')`);
+            battleBackground.classList.add('fading');
+
+            // Wait for fade to complete, then update actual background
+            setTimeout(() => {
+                battleBackground.style.backgroundImage = `url('${newImageUrl}')`;
+                battleBackground.style.setProperty('--new-background', 'none');
+                battleBackground.classList.remove('fading');
+            }, 1000); // Match CSS transition duration
+        }
+
+        // Create doctor card
+        function createDoctorCard() {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'enemy-card-wrapper location-card';
+            wrapper.setAttribute('data-location-id', 'doctor');
+
+            wrapper.innerHTML = `
+                <div class="card bg-dark text-white border-dark" data-card-id="doctor">
+                    <img src="img/cyber-doctor.jpeg" class="card-img-top" alt="Cyber Doctor">
+                    <div class="card-body">
+                        <h5 class="card-title">Cyber Doctor</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 heal-btn" data-location-id="doctor">Heal (10 credits)</button>
+                    </div>
+                </div>
+            `;
+
+            // Initially hidden, will fade in
+            wrapper.style.display = 'flex';
+            container.appendChild(wrapper);
+
+            // Fade in the doctor card after DOM update
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    wrapper.classList.add('show');
+                });
+            });
+
+            return wrapper;
+        }
+
+        // Create Cyber Merchant card
+        function createCyberMerchantCard() {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'enemy-card-wrapper location-card';
+            wrapper.setAttribute('data-location-id', 'cyber-merchant');
+
+            wrapper.innerHTML = `
+                <div class="card bg-dark text-white border-dark" data-card-id="cyber-merchant">
+                    <img src="img/cyber-merchant.jpeg" class="card-img-top" alt="Cyber Merchant">
+                    <div class="card-body">
+                        <h5 class="card-title">Cyber Merchant</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 talk-merchant-btn" data-location-id="cyber-merchant" id="merchant-talk-btn">Talk</button>
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 sell-bat-btn" data-location-id="cyber-merchant" id="merchant-sell-bat-btn">Sell Bat (10)</button>
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 buy-bat-btn" data-location-id="cyber-merchant" id="merchant-buy-bat-btn">Buy Bat (20) <span class="merchant-count" id="merchant-bat-count">10</span></button>
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 buy-stim-pack-btn" data-location-id="cyber-merchant" id="merchant-buy-stim-pack-btn">Buy Stim Pack (15) <span class="merchant-count" id="merchant-stim-pack-count">10</span></button>
+                    </div>
+                </div>
+            `;
+
+            // Initially hidden, will fade in
+            wrapper.style.display = 'flex';
+            container.appendChild(wrapper);
+
+            // Fade in the merchant card after DOM update
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    wrapper.classList.add('show');
+                    updateMerchantUI();
+                });
+            });
+
+            return wrapper;
+        }
+
+        // Create "The Streets" card
+        function createStreetsCard() {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+            const existing = container.querySelector('[data-location-id="streets"]');
+            if (existing) {
+                existing.remove();
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'enemy-card-wrapper location-card';
+            wrapper.setAttribute('data-location-id', 'streets');
+
+            wrapper.innerHTML = `
+                <div class="card bg-dark text-white border-dark" data-card-id="streets">
+                    <img src="img/cyber-city-street.jpeg" class="card-img-top" alt="The Streets">
+                    <div class="card-body">
+                        <h5 class="card-title">The Streets</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 location-go-btn" data-location-id="streets">Go</button>
+                    </div>
+                </div>
+            `;
+
+            // Initially hidden, will fade in
+            wrapper.style.display = 'flex';
+            container.appendChild(wrapper);
+
+            // Fade in the streets card after DOM update
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    wrapper.classList.add('show');
+                });
+            });
+
+            return wrapper;
+        }
+
+        // Handle healing at the hospital (adds to debt)
+        function healAtHospital() {
+            const player = gameState.player;
+            const hpRestored = player.maxHp - player.hp;
+
+            if (hpRestored <= 0) {
+                addMessage('You are already at full health!', 'info');
+                return;
+            }
+
+            const healCost = 10;
+
+            // Do the healing first
+            player.hp = player.maxHp;
+
+            // Track total HP healed for gradual max HP increases (1 HP per 100 HP healed)
+            player.totalHpHealed = (player.totalHpHealed || 0) + hpRestored;
+            const maxHpIncrease = Math.floor(player.totalHpHealed / 100);
+
+            if (maxHpIncrease > 0) {
+                player.maxHp += maxHpIncrease;
+                player.hp = player.maxHp; // Increase current HP to match new max HP
+                player.totalHpHealed = player.totalHpHealed % 100; // Keep remainder
+            }
+
+            // Charge 10 credits per heal
+            player.credits -= healCost;
+            updateCardHP('player');
+            updateCreditsDisplay();
+
+            // Show healing message first
+            if (maxHpIncrease > 0) {
+                addMessage(`The doctor heals you, restoring ${Math.round(hpRestored)} HP. Your maximum HP increased by ${maxHpIncrease}! (Max HP: ${Math.round(player.maxHp)})`, 'success');
+            } else {
+                addMessage(`The doctor heals you, restoring ${Math.round(hpRestored)} HP.`, 'success');
+            }
+
+            // Then add the bill log message immediately after
+            const debt = Math.abs(player.credits);
+            addMessage(`Hospital bill: ${debt} credits owed.`, 'info');
+        }
+
+        // Doctor talks to the player
+        function doctorTalksToPlayer(isOpening = false) {
+            if (isOpening) {
+                addMessage('Doctor: "So do us both a favor… try not to die before you can settle the tab."', 'info');
+            } else {
+                const player = gameState.player;
+                const debt = Math.abs(player.credits);
+                const messages = [
+                    "Welcome to the hospital. I'll heal you automatically when you arrive injured.",
+                    "Stay safe out there in the streets. Come back if you need healing.",
+                    "I'll restore your health whenever you need it. The cost will be added to your hospital debt.",
+                    "The city can be dangerous. Make sure to keep your health up.",
+                    "If you get injured, remember to come back here for treatment.",
+                    debt > 0 ? `Don't forget you owe ${debt} credits to the hospital.` : "You're all paid up with the hospital."
+                ];
+
+                const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                addMessage(`Doctor: "${randomMessage}"`, 'info');
+            }
+        }
+
+        // Handle selling bat at the cyber market
+        function sellBat() {
+            const player = gameState.player;
+            const batPrice = 10; // Credits per bat
+
+            if (!playerInventory.bat || playerInventory.bat <= 0) {
+                addMessage('You don\'t have any bats to sell!', 'warning');
+                return;
+            }
+
+            // Remove one bat from player inventory
+            playerInventory.bat -= 1;
+
+            // If the bat is equipped and we now have 0, unequip it
+            if (isWeaponEquipped('bat') && playerInventory.bat <= 0) {
+                equippedWeapons.bat = false;
+                addMessage('You unequipped the bat.', 'info');
+            }
+
+            // Add bat to merchant inventory
+            merchantInventory.bat = (merchantInventory.bat || 0) + 1;
+
+            // Add credits
+            player.credits += batPrice;
+
+            // Show Cyber Bat card when selling (visual feedback)
+            // This will update the card to show the bat if equipped
+            updateCyberBatCard();
+
+            // Update UI
+            updateInventoryUI();
+            updateCreditsDisplay();
+            updateMerchantUI();
+
+            addMessage(`You sold a bat for ${batPrice} credits! (Credits: ${player.credits})`, 'success');
+        }
+
+        // Update credits display (shows debt when negative)
+        function updateCreditsDisplay() {
+            const creditsElement = document.querySelector('.credits');
+            if (creditsElement) {
+                const credits = gameState.player.credits;
+                const symbol = ' ¥';
+                if (credits < 0) {
+                    creditsElement.textContent = Math.round(credits) + ' (Owed: ' + Math.abs(Math.round(credits)) + ')' + symbol;
+                } else {
+                    creditsElement.textContent = Math.round(credits) + symbol;
+                }
+            }
+        }
+
+        // Update merchant UI to show inventory counts
+        function updateMerchantUI() {
+            const batCountElement = document.getElementById('merchant-bat-count');
+            const stimPackCountElement = document.getElementById('merchant-stim-pack-count');
+            const buyBatBtn = document.getElementById('merchant-buy-bat-btn');
+            const buyStimPackBtn = document.getElementById('merchant-buy-stim-pack-btn');
+            const sellBatBtn = document.getElementById('merchant-sell-bat-btn');
+
+            // Update merchant inventory counts immediately
+            if (batCountElement) {
+                const count = merchantInventory.bat ?? 0;
+                batCountElement.textContent = count;
+            }
+            if (stimPackCountElement) {
+                const count = merchantInventory.stimPack ?? 0;
+                stimPackCountElement.textContent = count;
+            }
+
+            // Hide/show sell bat button based on player inventory and update count
+            if (sellBatBtn) {
+                const playerBatCount = playerInventory.bat ?? 0;
+                if (playerBatCount <= 0) {
+                    sellBatBtn.style.display = 'none';
+                } else {
+                    sellBatBtn.style.display = 'block';
+                    // Update button text to show available bats
+                    sellBatBtn.textContent = `Sell Bat (10) ${playerBatCount}`;
+                }
+            }
+
+            // Hide/show buy buttons based on merchant inventory
+            if (buyBatBtn) {
+                const merchantBatCount = merchantInventory.bat ?? 0;
+                if (merchantBatCount <= 0) {
+                    buyBatBtn.style.display = 'none';
+                } else {
+                    buyBatBtn.style.display = 'block';
+                    buyBatBtn.disabled = false;
+                    buyBatBtn.style.opacity = '1';
+                    buyBatBtn.style.cursor = 'pointer';
+                }
+            }
+            if (buyStimPackBtn) {
+                const merchantStimPackCount = merchantInventory.stimPack ?? 0;
+                if (merchantStimPackCount <= 0) {
+                    buyStimPackBtn.style.display = 'none';
+                } else {
+                    buyStimPackBtn.style.display = 'block';
+                    buyStimPackBtn.disabled = false;
+                    buyStimPackBtn.style.opacity = '1';
+                    buyStimPackBtn.style.cursor = 'pointer';
+                }
+            }
+        }
+
+        // Handle buying bat at the cyber market
+        function buyBat() {
+            const player = gameState.player;
+            const batPrice = 20; // Credits per bat
+
+            if (player.credits < batPrice) {
+                addMessage(`You don't have enough credits! Need ${batPrice} credits, but you only have ${Math.round(player.credits)}.`, 'warning');
+                return;
+            }
+
+            if (!merchantInventory.bat || merchantInventory.bat <= 0) {
+                addMessage('The merchant is out of bats!', 'warning');
+                return;
+            }
+
+            // Deduct credits
+            player.credits -= batPrice;
+
+            // Remove bat from merchant inventory
+            merchantInventory.bat -= 1;
+
+            // Add bat to player inventory
+            playerInventory.bat = (playerInventory.bat || 0) + 1;
+
+            // Update UI
+            updateInventoryUI();
+            updateCreditsDisplay();
+            updateMerchantUI();
+
+            addMessage(`You bought a bat for ${batPrice} credits! (Credits: ${Math.round(player.credits)})`, 'success');
+        }
+
+        // Handle talking to merchant
+        function talkToMerchant() {
+            // Check if merchant is out of bats
+            if (merchantInventory.bat <= 0) {
+                addMessage('Merchant: "I\'m in the market for Cyber Bats. If you ever get any I\'ll pay 10 credits per bat."', 'info');
+                return;
+            }
+
+            const messages = [
+                "Welcome to my shop! I deal in the finest cyber goods.",
+                "Looking for weapons? I've got your bat.",
+                "Need some healing? Try my stim packs!",
+                "Business is good these days. Lots of travelers.",
+                "Remember, you can always sell items back to me for credits.",
+                "Stay safe out there in the streets, friend."
+            ];
+
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            addMessage(`Merchant: "${randomMessage}"`, 'info');
+        }
+
+        // Handle buying stim pack at the cyber market
+        function buyStimPack() {
+            const player = gameState.player;
+            const stimPackPrice = 15; // Credits per stim pack
+
+            if (player.credits < stimPackPrice) {
+                addMessage(`You don't have enough credits! Need ${stimPackPrice} credits, but you only have ${Math.round(player.credits)}.`, 'warning');
+                return;
+            }
+
+            if (!merchantInventory.stimPack || merchantInventory.stimPack <= 0) {
+                addMessage('The merchant is out of stim packs!', 'warning');
+                return;
+            }
+
+            // Deduct credits
+            player.credits -= stimPackPrice;
+
+            // Remove stim pack from merchant inventory
+            merchantInventory.stimPack -= 1;
+
+            // Add stim pack to player inventory
+            playerInventory.stimPack = (playerInventory.stimPack || 0) + 1;
+
+            // Update UI
+            updateInventoryUI();
+            updateCreditsDisplay();
+            updateMerchantUI();
+
+            addMessage(`You bought a stim pack for ${stimPackPrice} credits! (Credits: ${Math.round(player.credits)})`, 'success');
+        }
+
+        // Handle using stim pack
+        function useStimPack() {
+            const player = gameState.player;
+
+            if (!playerInventory.stimPack || playerInventory.stimPack <= 0) {
+                addMessage('You don\'t have any stim packs!', 'warning');
+                return;
+            }
+
+            if (player.hp >= player.maxHp) {
+                addMessage('You are already at full health!', 'info');
+                return;
+            }
+
+            // Use one stim pack
+            playerInventory.stimPack -= 1;
+
+            // Restore HP (stim pack restores 50 HP or to max, whichever is less)
+            const healAmount = Math.min(50, player.maxHp - player.hp);
+            player.hp = Math.min(player.maxHp, player.hp + 50);
+
+            // Update UI
+            updateInventoryUI();
+            updateCardHP('player');
+
+            addMessage(`You used a stim pack and restored ${Math.round(healAmount)} HP! (HP: ${Math.round(player.hp)}/${Math.round(player.maxHp)})`, 'success');
+        }
+
+        // Spawn a specific number of enemies (for random encounters)
+        function spawnRandomEnemies(count) {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+
+            // Clear container
+            container.innerHTML = '';
+            currentBattleEnemyCount = count;
+            currentZone = 'battle';
+            updateCyberBatCard(); // Hide Cyber Doctor card when entering battle
+
+            // Change background to streets for street encounters
+            if (pendingDestination === null || pendingDestination === 'streets') {
+                changeBackground('img/cyber-city-street.jpeg');
+            }
+
+            // Initialize enemies in game state
+            for (let i = 1; i <= count; i++) {
+                const enemyId = `enemy${i}`;
+                gameState[enemyId] = { hp: 100, maxHp: 100 };
+            }
+
+            // Create enemy cards
+            for (let i = 1; i <= count; i++) {
+                const enemyId = `enemy${i}`;
+                createEnemyCard(enemyId, i);
+            }
+
+            // Initialize HP displays
+            for (let i = 1; i <= count; i++) {
+                updateCardHP(`enemy${i}`);
+            }
+
+            // Update location cards visibility
+            updateLocationCardsVisibility();
+
+            // Update flee button visibility based on battle state
+            updateFleeButtonVisibility();
+        }
+
+        // Visit location
+        function visitLocation(locationId) {
+            if (locationId === 'streets') {
+                const locationName = getLocationDisplayName(locationId);
+                addMessage(`You head towards the ${locationName}...`, 'info');
+
+                // Check for random encounter when going to streets
+                const encountered = maybeTriggerEncounter(locationId);
+
+                if (!encountered) {
+                    // No encounter, proceed to streets
+                    addMessage('You arrive at the streets...', 'info');
+                    currentZone = 'streets';
+
+                    // Fade out doctor card, merchant card, and streets card
+                    const doctorCard = document.querySelector('[data-location-id="doctor"]');
+                    const merchantCard = document.querySelector('[data-location-id="cyber-merchant"]');
+                    const streetsCard = document.querySelector('[data-location-id="streets"]');
+
+                    // Collect cards to fade out
+                    const cardsToRemove = [];
+                    if (doctorCard) cardsToRemove.push(doctorCard);
+                    if (merchantCard) cardsToRemove.push(merchantCard);
+                    if (streetsCard) cardsToRemove.push(streetsCard);
+
+                    // Remove cards and then change background
+                    const goToStreets = () => {
+                        changeBackground('img/cyber-city-street.jpeg');
+                        createLocationCard('hospital', 'Hospital', 'img/cyber-city-hospital-street.jpeg');
+                        createLocationCard('cyber-market', 'Cyber Market', 'img/cyber-market.jpeg');
+                        updateLocationCardsVisibility();
+                        updateCyberBatCard(); // Hide Cyber Doctor card when leaving hospital
+                    };
+
+                    if (cardsToRemove.length > 0) {
+                        cardsToRemove.forEach(card => {
+                            fadeOutAndRemove(card);
+                        });
+
+                        // After fade-out completes, change background and show location cards
+                        setTimeout(() => {
+                            goToStreets();
+                        }, FADE_OUT_DURATION);
+                    } else {
+                        // Cards already removed, just change background
+                        goToStreets();
+                    }
+                }
+                // If encounter happened, spawnRandomEnemies already handled it
+                return;
+            }
+
+            const locationName = getLocationDisplayName(locationId);
+            addMessage(`You head towards the ${locationName}...`, 'info');
+
+            const locationCard = document.querySelector(`[data-location-id="${locationId}"]`);
+
+            const travel = () => {
+                const encountered = maybeTriggerEncounter(locationId);
+                if (!encountered) {
+                    arriveAtLocation(locationId);
+                }
+            };
+
+            if (locationCard) {
+                fadeOutAndRemove(locationCard, travel);
+            } else {
+                travel();
+            }
+        }
+
+        // Flee function - ends the battle
+        function fleeBattle() {
+            // Disable all attack buttons
+            const allAttackButtons = document.querySelectorAll('.attack-btn');
+            allAttackButtons.forEach(btn => btn.disabled = true);
+
+            // Disable flee button
+            const fleeBtn = document.getElementById('flee-btn');
+            if (fleeBtn) {
+                fleeBtn.disabled = true;
+            }
+
+            addMessage('You fled from battle!', 'warning');
+
+            // Get the destination before clearing pendingDestination
+            const destination = pendingDestination || 'hospital';
+
+            // Clear current enemies
+            const container = document.getElementById('enemy-cards-container');
+            if (container) {
+                container.innerHTML = '';
+            }
+
+            // Remove enemies from game state
+            for (const key in gameState) {
+                if (key.startsWith('enemy')) {
+                    delete gameState[key];
+                }
+            }
+
+            // Update flee button visibility AFTER clearing enemies (hide it since battle is over)
+            updateFleeButtonVisibility();
+
+            // Reset pending destination
+            pendingDestination = null;
+
+            // Return to the previous location (where we came from) if it exists
+            // Otherwise, fall back to destination or hospital
+            const returnLocation = previousLocation || destination || 'hospital';
+
+            // Always return to where we came from (previousLocation takes priority)
+            arriveAtLocation(returnLocation);
+            addMessage('You flee back to safety.', 'info');
+
+            // Ensure flee button is hidden after arriving at location
+            // Use a small delay to ensure arriveAtLocation has completed
+            setTimeout(() => {
+                updateFleeButtonVisibility();
+            }, 100);
+
+            previousLocation = null;
+        }
+
+        // Add event listeners to all attack buttons (using event delegation for dynamic content)
+        document.addEventListener('DOMContentLoaded', function () {
+            // Clear any previous messages
+            clearMessages();
+
+            // Initialize HP display to show 0 HP
+            updateCardHP('player');
+
+            // Story introduction
+            addMessage('You wake up in a hospital bed, your vision slowly coming into focus. The sterile smell of antiseptic fills the air.', 'info');
+
+            setTimeout(() => {
+                addMessage('A cyber-doctor approaches, their mechanical limbs whirring softly. They check your vitals and adjust some monitors.', 'info');
+                healAtHospital();
+                setTimeout(() => {
+                    addMessage('Doctor: "You\'re lucky to be alive. That was a nasty encounter out there."', 'info');
+
+                    setTimeout(() => {
+                        addMessage('You notice a medical bill on the table next to you. The balance shows -10 credits.', 'warning');
+
+                        setTimeout(() => {
+                            // Spawn enemies (skip the default doctor dialogue since we're handling it)
+                            spawnEnemies(true);
+                            // Automatically heal the player
+                            setTimeout(() => {
+                                // Doctor says the opening line after healing
+                                setTimeout(() => {
+                                    doctorTalksToPlayer(true);
+                                }, 800);
+                            }, 500);
+                        }, 1500);
+                    }, 1500);
+                }, 1500);
+            }, 1500);
+
+            // Initialize player stats display
+            updatePlayerStats();
+            updateInventoryUI();
+            updateCreditsDisplay();
+            updateCardHP('player'); // Initialize HP display to show 0 HP
+
+            // Initialize info card (shows Cyber Doctor at game start)
+            updateCyberBatCard();
+
+            // Initialize HP displays for all enemies
+            for (let i = 1; i <= NUM_ENEMIES; i++) {
+                updateCardHP(`enemy${i}`);
+            }
+
+            // Use event delegation for attack buttons (works with dynamically created elements)
+            document.addEventListener('click', function (event) {
+                if (event.target.classList.contains('attack-btn')) {
+                    const attackType = event.target.getAttribute('data-attack-type');
+                    const targetId = event.target.getAttribute('data-target');
+
+                    performAttack(attackType, targetId);
+                }
+
+                // Handle location "Go" buttons
+                if (event.target.classList.contains('location-go-btn')) {
+                    const locationId = event.target.getAttribute('data-location-id');
+                    visitLocation(locationId);
+                }
+
+                // Handle "Heal" button (now automatic, but keep for compatibility)
+                if (event.target.classList.contains('heal-btn')) {
+                    healAtHospital();
+                }
+
+                // Handle "Sell Bat" button
+                if (event.target.classList.contains('sell-bat-btn')) {
+                    sellBat();
+                }
+
+                // Handle "Buy Bat" button
+                if (event.target.classList.contains('buy-bat-btn')) {
+                    buyBat();
+                }
+
+                // Handle "Buy Stim Pack" button
+                if (event.target.classList.contains('buy-stim-pack-btn')) {
+                    buyStimPack();
+                }
+
+                // Handle "Talk" button on merchant
+                if (event.target.classList.contains('talk-merchant-btn')) {
+                    talkToMerchant();
+                }
+
+                // Handle inventory equip toggles and item usage
+                const inventoryItem = event.target.closest ? event.target.closest('.inventory-item') : null;
+                if (inventoryItem) {
+                    const itemId = inventoryItem.getAttribute('data-item');
+
+                    // Handle stim pack usage
+                    if (itemId === 'stimPack') {
+                        useStimPack();
+                    } else {
+                        // Handle weapon equip toggles
+                        toggleWeaponEquip(itemId);
+                    }
+                }
+            });
+
+            // Add event listener to flee button
+            const fleeBtn = document.getElementById('flee-btn');
+            if (fleeBtn) {
+                fleeBtn.addEventListener('click', function () {
+                    fleeBattle();
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
