@@ -426,6 +426,7 @@
         <div class="row py-3 rounded-3 border border-dark border-2" id="battle-background"
             style="background-image: url('img/cyber-city-hospital-street.jpeg'); background-size: cover; background-position: center;">
             <div class="col-9">
+                <h4 class="mb-3" id="area-name-display">Hospital</h4>
                 <div class="enemy-cards-container" id="enemy-cards-container">
                     <!-- Enemy cards will be generated dynamically -->
                 </div>
@@ -447,7 +448,7 @@
                     <div class="list-group list-group-flush">
                         <button class="btn btn-primary w-100 rounded-0 mb-3" id="flee-btn">Flee</button>
                     </div>
-                    <h6 class="card-title mx-3">Stats</h6>
+
                     <ul class="list-group list-group-flush player-stats-list">
                         <li class="list-group-item bg-dark text-white border-secondary">Str: <span
                                 id="str-stat">1</span></li>
@@ -462,6 +463,11 @@
                         <button id="inventory-bat"
                             class="btn btn-primary inventory-item inventory-unequipped w-100 rounded-0" data-item="bat">
                             Bat: <span id="bat-count">1</span>
+                        </button>
+                        <button id="inventory-sword"
+                            class="btn btn-primary inventory-item inventory-unequipped w-100 rounded-0"
+                            data-item="sword">
+                            Sword: <span id="sword-count">0</span>
                         </button>
                         <button id="inventory-stim-pack" class="btn btn-primary inventory-item w-100 rounded-0"
                             data-item="stimPack">
@@ -483,7 +489,6 @@
                     <div class="card-body">
                         <h5 class="card-title" id="cyber-info-card-title">Cyber Doctor</h5>
                     </div>
-                    <h6 class="card-title mx-3">Stats</h6>
                     <ul class="list-group list-group-flush player-stats-list" id="cyber-info-card-stats">
                         <li class="list-group-item bg-dark text-white border-secondary" id="cyber-info-card-stat-1">
                             Healing: Automatic (Debt)</li>
@@ -505,23 +510,47 @@
 
         // Game state - track HP for each card
         const gameState = {
-            player: { hp: 0, maxHp: 100, strength: 1, defense: 1, ranged: 1, credits: 0, totalHpHealed: 0 }
+            player: { hp: 0, maxHp: 100, strength: 1, defense: 1, ranged: 1, credits: 0, totalHpHealed: 0, nextLevelThreshold: 100 }
         };
         let currentBattleEnemyCount = 0;
+        let currentBattleSwordPunkCount = 0; // Track sword punks separately for sword drops
         let pendingDestination = null;
         let previousLocation = null; // Track where we came from for street encounters
         let currentZone = 'hospital';
+        let currentStreet = null; // Track which street the player is currently on (streets, main-street, downtown, etc.)
 
         const LOCATION_DISPLAY_NAMES = {
             hospital: 'Hospital',
             'cyber-market': 'Cyber Market',
-            streets: 'Streets'
+            'main-street-market': 'Main Street Market',
+            streets: 'Grove Street',
+            'bus-stop': 'Bus Stop',
+            'main-street': 'Downtown',
+            battle: 'Battle'
         };
 
+        // Define all street locations (places that have bus stops)
+        const STREET_LOCATIONS = [
+            { id: 'streets', name: 'Grove Street', image: 'img/cyber-city-street.jpeg' },
+            { id: 'main-street', name: 'Downtown', image: 'img/downtown.jpeg' }
+        ];
+
+        // Update area name display
+        function updateAreaNameDisplay() {
+            const areaNameDisplay = document.getElementById('area-name-display');
+            if (areaNameDisplay) {
+                const displayName = getLocationDisplayName(currentZone);
+                areaNameDisplay.textContent = displayName;
+            }
+        }
+
         const ZONE_CARD_RULES = {
-            streets: ['hospital', 'cyber-market'],
+            streets: ['hospital', 'cyber-market', 'bus-stop'],
             hospital: ['doctor', 'streets'],
             'cyber-market': ['cyber-merchant', 'streets'],
+            'bus-stop': [], // Dynamically populated based on STREET_LOCATIONS - all bus-stop-to-* cards
+            'main-street': ['bus-stop', 'main-street-market'],
+            'main-street-market': ['cyber-merchant', 'main-street'],
             battle: [],
             travel: []
         };
@@ -542,29 +571,35 @@
         }
 
         // Create and append enemy card to the container
-        function createEnemyCard(enemyId, enemyNumber) {
+        function createEnemyCard(enemyId, enemyNumber, enemyType = 'club') {
             const container = document.getElementById('enemy-cards-container');
             if (!container) return;
+
+            // Determine enemy name, image, and HP based on type
+            const enemyName = enemyType === 'sword' ? `Sword Punk ${enemyNumber}` : `Cyber Punk ${enemyNumber}`;
+            const enemyImage = enemyType === 'sword' ? 'img/sword-lady.jpeg' : 'img/cyber-punk-1.jpeg';
+            const enemyData = gameState[enemyId];
+            const enemyHp = enemyData ? enemyData.hp : (enemyType === 'sword' ? 120 : 100);
+            const enemyMaxHp = enemyData ? enemyData.maxHp : (enemyType === 'sword' ? 120 : 100);
+            const hpPercent = (enemyHp / enemyMaxHp) * 100;
 
             const wrapper = document.createElement('div');
             wrapper.className = 'enemy-card-wrapper';
 
             wrapper.innerHTML = `
                         <div class="card bg-dark text-white border-dark" data-card-id="${enemyId}">
-                            <img src="img/cyber-punk-1.jpeg" class="card-img-top" alt="...">
+                            <img src="${enemyImage}" class="card-img-top" alt="${enemyName}">
                             <div class="card-body">
-                                <h5 class="card-title">Cyber Punk ${enemyNumber}</h5>
-                                <p class="card-text mb-1">HP: <span class="hp-value">100</span></p>
+                                <h5 class="card-title">${enemyName}</h5>
+                                <p class="card-text mb-1">HP: <span class="hp-value">${enemyHp}</span></p>
                                 <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-success hp-bar" role="progressbar" style="width: 100%"
-                                        aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                    <div class="progress-bar bg-success hp-bar" role="progressbar" style="width: ${hpPercent}%"
+                                        aria-valuenow="${enemyHp}" aria-valuemin="0" aria-valuemax="${enemyMaxHp}"></div>
                                 </div>
                             </div>
                             <div class="list-group list-group-flush">
-                                <button class="btn btn-primary w-100 rounded-0 attack-btn" data-attack-type="melee"
+                                <button class="btn btn-primary w-100 rounded-0 mb-3 attack-btn" data-attack-type="melee"
                                     data-target="${enemyId}">Melee Attack</button>
-                                <button class="btn btn-primary w-100 rounded-0 mb-3 attack-btn"
-                                    data-attack-type="ranged" data-target="${enemyId}">Ranged Attack</button>
                             </div>
                         </div>
                     `;
@@ -616,9 +651,108 @@
                 .join(' ');
         }
 
+        // Create separate bus stop cards for each street destination
+        // This function is called when you're at the bus-stop location
+        // It dynamically shows bus stop cards based on which street the player came from
+        function createBusStopCards() {
+            // Determine which street the player came from (previousLocation or currentZone if it's a street)
+            const originStreet = previousLocation && STREET_LOCATIONS.find(s => s.id === previousLocation)
+                ? previousLocation
+                : (STREET_LOCATIONS.find(s => s.id === currentZone) ? currentZone : 'streets');
+
+            // Create bus stop cards for all streets
+            STREET_LOCATIONS.forEach(street => {
+                if (street.id === originStreet) {
+                    // Free return to the street you came from - use street image and "Back to [Street Name]"
+                    createBusStopLocationCard(street.id, street.name, street.image, true, true);
+                } else {
+                    // 10 credits to go to other streets - use bus stop image and bus stop name
+                    const busStopName = `${street.name} Bus Stop`;
+                    createBusStopLocationCard(street.id, busStopName, 'img/cyber-bus-stop.jpeg', false, false);
+                }
+            });
+        }
+
+        // Create a bus stop location card (to go to a specific bus stop area)
+        function createBusStopLocationCard(streetId, cardName, imagePath, isFree, isReturn) {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+            const existing = container.querySelector(`[data-location-id="bus-stop-to-${streetId}"]`);
+            if (existing) {
+                existing.remove();
+            }
+
+            // Get the street name for the button text
+            const street = STREET_LOCATIONS.find(s => s.id === streetId);
+            const streetName = street ? street.name : cardName;
+
+            const costText = isFree && isReturn ? `Back to ${streetName}` : (isFree ? 'Go' : 'Go (10 credits)');
+            const buttonClass = isFree ? 'location-go-btn' : 'bus-stop-travel-btn';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'enemy-card-wrapper location-card';
+            wrapper.setAttribute('data-location-id', `bus-stop-to-${streetId}`);
+
+            const cardTitle = isReturn ? streetName : cardName;
+
+            wrapper.style.display = 'none';
+            wrapper.innerHTML = `
+                <div class="card bg-dark text-white border-dark" data-card-id="bus-stop-to-${streetId}">
+                    <img src="${imagePath}" class="card-img-top" alt="${cardTitle}">
+                    <div class="card-body">
+                        <h5 class="card-title">${cardTitle}</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 ${buttonClass}" data-location-id="${streetId}" data-street-id="${streetId}" data-street-name="${streetName}" data-is-free="${isFree}">${costText}</button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(wrapper);
+            updateLocationCardsVisibility();
+            return wrapper;
+        }
+
+        // Create a single bus stop destination card
+        function createBusStopDestinationCard(streetId, streetName, imagePath) {
+            const container = document.getElementById('enemy-cards-container');
+            if (!container) return;
+            const existing = container.querySelector(`[data-location-id="bus-stop-${streetId}"]`);
+            if (existing) {
+                existing.remove();
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'enemy-card-wrapper location-card';
+            wrapper.setAttribute('data-location-id', `bus-stop-${streetId}`);
+
+            wrapper.style.display = 'none';
+            wrapper.innerHTML = `
+                <div class="card bg-dark text-white border-dark" data-card-id="bus-stop-${streetId}">
+                    <img src="${imagePath}" class="card-img-top" alt="${streetName}">
+                    <div class="card-body">
+                        <h5 class="card-title">${streetName}</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 bus-stop-travel-btn" data-street-id="${streetId}" data-street-name="${streetName}">Go (10 credits)</button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(wrapper);
+            updateLocationCardsVisibility();
+            return wrapper;
+        }
+
         function maybeTriggerEncounter(locationId) {
             // Check for random encounters (except when already in battle)
             if (currentZone === 'battle') {
+                return false;
+            }
+
+            // Disable encounters when traveling TO bus-stop or main-street (safe zones)
+            // But allow encounters when LEAVING them (traveling between streets)
+            if (locationId === 'bus-stop' || locationId === 'main-street') {
                 return false;
             }
 
@@ -651,6 +785,10 @@
 
         function arriveAtLocation(locationId) {
             currentZone = locationId;
+            // Update currentStreet if arriving at a street location, otherwise set to null
+            const isStreet = STREET_LOCATIONS.find(s => s.id === locationId);
+            currentStreet = isStreet ? locationId : null;
+            updateAreaNameDisplay();
 
             // Determine which cards should be visible in the new location
             const allowedCards = ZONE_CARD_RULES[locationId] || [];
@@ -662,8 +800,8 @@
             allLocationCards.forEach(card => {
                 const cardLocationId = card.getAttribute('data-location-id');
                 // Remove location cards that aren't allowed in the new location
-                // Also remove any location navigation cards (hospital, cyber-market) as they'll be replaced
-                if (cardLocationId === 'hospital' || cardLocationId === 'cyber-market') {
+                // Also remove any location navigation cards (hospital, cyber-market, main-street-market, bus-stop, bus-stop-*) as they'll be replaced
+                if (cardLocationId === 'hospital' || cardLocationId === 'cyber-market' || cardLocationId === 'main-street-market' || cardLocationId === 'bus-stop' || cardLocationId.startsWith('bus-stop-')) {
                     // Always remove navigation location cards when arriving at a new location
                     cardsToRemove.push(card);
                 } else if (!allowedCards.includes(cardLocationId)) {
@@ -708,11 +846,26 @@
                 changeBackground('img/cyber-market.jpeg');
                 createCyberMerchantCard();
                 createStreetsCard();
+            } else if (locationId === 'main-street-market') {
+                addMessage('You enter the Main Street Market...', 'info');
+                changeBackground('img/main-street-market.jpeg');
+                createCyberMerchantCard();
+                createLocationCard('main-street', 'Back to Downtown', 'img/downtown.jpeg');
             } else if (locationId === 'streets') {
                 addMessage('You arrive at the streets...', 'info');
                 changeBackground('img/cyber-city-street.jpeg');
                 createLocationCard('hospital', 'Hospital', 'img/cyber-city-hospital-street.jpeg');
                 createLocationCard('cyber-market', 'Cyber Market', 'img/cyber-market.jpeg');
+                createLocationCard('bus-stop', 'Bus Stop', 'img/cyber-bus-stop.jpeg');
+            } else if (locationId === 'bus-stop') {
+                addMessage('You arrive at the Bus Stop...', 'info');
+                changeBackground('img/cyber-bus-stop.jpeg');
+                createBusStopCards();
+            } else if (locationId === 'main-street') {
+                addMessage('You arrive at Downtown...', 'info');
+                changeBackground('img/downtown.jpeg');
+                createLocationCard('bus-stop', 'Bus Stop', 'img/cyber-bus-stop.jpeg');
+                createLocationCard('main-street-market', 'Main Street Market', 'img/main-street-market.jpeg');
             } else {
                 addMessage(`You arrive at the ${getLocationDisplayName(locationId)}.`, 'info');
             }
@@ -731,7 +884,12 @@
 
             locationCards.forEach(card => {
                 const locationId = card.getAttribute('data-location-id');
-                const shouldShow = !hasActiveEnemies && allowedCards.includes(locationId);
+                // Special handling for bus-stop cards - show all bus-stop-to-* cards when at bus-stop
+                const isBusStopCard = locationId && locationId.startsWith('bus-stop-to-');
+                const shouldShow = !hasActiveEnemies && (
+                    allowedCards.includes(locationId) ||
+                    (isBusStopCard && currentZone === 'bus-stop')
+                );
 
                 if (shouldShow) {
                     if (card.style.display !== 'flex') {
@@ -833,8 +991,11 @@
             container.innerHTML = '';
 
             currentBattleEnemyCount = NUM_ENEMIES;
+            currentBattleSwordPunkCount = 0; // Only sword punks in downtown count for sword drops
             pendingDestination = null;
             currentZone = 'hospital';
+            currentStreet = null; // Not on a street location
+            updateAreaNameDisplay();
 
             // Initialize enemies in game state
             initializeEnemies();
@@ -922,21 +1083,25 @@
         // Player inventory and weapon bonuses
         const playerInventory = {
             bat: 0,
+            sword: 0,
             stimPack: 0
         };
 
         // Merchant inventory
         const merchantInventory = {
             bat: 0,
+            sword: 0,
             stimPack: 10
         };
 
         const equippedWeapons = {
-            bat: false
+            bat: false,
+            sword: false
         };
 
         const weaponDamageBonus = {
-            bat: 5
+            bat: 5,
+            sword: 7 // Slightly more powerful than bat
         };
 
         // Enemy attack damage values
@@ -945,12 +1110,22 @@
             max: 15
         };
 
+        // Sword punk attack damage values (slightly higher)
+        const swordPunkAttackDamage = {
+            min: 10,
+            max: 18
+        };
+
         // Calculate melee weapon bonus from inventory
         function getMeleeWeaponBonus() {
             let bonus = 0;
 
             if (playerInventory.bat && playerInventory.bat > 0 && isWeaponEquipped('bat')) {
                 bonus += weaponDamageBonus.bat;
+            }
+
+            if (playerInventory.sword && playerInventory.sword > 0 && isWeaponEquipped('sword')) {
+                bonus += weaponDamageBonus.sword;
             }
 
             return bonus;
@@ -982,10 +1157,23 @@
                 return;
             }
 
-            equippedWeapons[weapon] = !equippedWeapons[weapon];
-            updateInventoryUI();
+            const wasEquipped = equippedWeapons[weapon];
+            const isEquipping = !wasEquipped;
 
-            const action = equippedWeapons[weapon] ? 'equipped' : 'unequipped';
+            // If equipping a weapon, unequip the other weapon first
+            if (isEquipping && weapon === 'bat' && isWeaponEquipped('sword')) {
+                equippedWeapons.sword = false;
+                addMessage(`You unequipped the sword.`, 'info');
+            } else if (isEquipping && weapon === 'sword' && isWeaponEquipped('bat')) {
+                equippedWeapons.bat = false;
+                addMessage(`You unequipped the bat.`, 'info');
+            }
+
+            equippedWeapons[weapon] = isEquipping;
+            updateInventoryUI();
+            updateCyberBatCard(); // Update weapon card display
+
+            const action = isEquipping ? 'equipped' : 'unequipped';
             addMessage(`You ${action} the ${weapon}.`, 'info');
         }
 
@@ -1017,6 +1205,33 @@
                 }
             }
 
+            const swordItem = document.getElementById('inventory-sword');
+            const swordCount = document.getElementById('sword-count');
+            const swordCountValue = playerInventory.sword ?? 0;
+
+            if (swordCount) {
+                swordCount.textContent = swordCountValue;
+            }
+
+            // Automatically unequip sword if count reaches 0
+            if (swordCountValue <= 0 && isWeaponEquipped('sword')) {
+                equippedWeapons.sword = false;
+                addMessage('You unequipped the sword.', 'info');
+            }
+
+            if (swordItem) {
+                const equipped = isWeaponEquipped('sword');
+                swordItem.classList.toggle('inventory-equipped', equipped);
+                swordItem.classList.toggle('inventory-unequipped', !equipped);
+
+                // Hide the button if count is 0, show it if count is greater than 0
+                if (swordCountValue <= 0) {
+                    swordItem.style.display = 'none';
+                } else {
+                    swordItem.style.display = 'block';
+                }
+            }
+
             const stimPackItem = document.getElementById('inventory-stim-pack');
             const stimPackCount = document.getElementById('stim-pack-count');
             const stimPackCountValue = playerInventory.stimPack ?? 0;
@@ -1044,11 +1259,30 @@
             if (!infoCard) return;
 
             const batCount = playerInventory.bat ?? 0;
+            const swordCount = playerInventory.sword ?? 0;
             const isBatEquipped = isWeaponEquipped('bat') && batCount > 0;
+            const isSwordEquipped = isWeaponEquipped('sword') && swordCount > 0;
             const isAtHospital = currentZone === 'hospital';
 
-            // Show Cyber Bat if equipped (anywhere)
-            if (isBatEquipped) {
+            // Show equipped weapon (sword takes priority over bat)
+            if (isSwordEquipped) {
+                // Show Cyber Sword
+                const img = document.getElementById('cyber-info-card-img');
+                const title = document.getElementById('cyber-info-card-title');
+                const statsList = document.getElementById('cyber-info-card-stats');
+
+                if (img) {
+                    img.src = 'img/cyber-sword.jpeg';
+                    img.alt = 'Cyber Sword';
+                }
+                if (title) title.textContent = 'Cyber Sword';
+
+                if (statsList) {
+                    statsList.innerHTML = `<li class="list-group-item bg-dark text-white border-secondary">Melee Damage: <span id="sword-damage-stat">+${weaponDamageBonus.sword}</span></li>`;
+                }
+
+                infoCard.style.display = 'block';
+            } else if (isBatEquipped) {
                 // Show Cyber Bat
                 const img = document.getElementById('cyber-info-card-img');
                 const title = document.getElementById('cyber-info-card-title');
@@ -1061,7 +1295,7 @@
                 if (title) title.textContent = 'Cyber Bat';
 
                 if (statsList) {
-                    statsList.innerHTML = '<li class="list-group-item bg-dark text-white border-secondary">Melee Damage: <span id="bat-damage-stat">+5</span></li>';
+                    statsList.innerHTML = `<li class="list-group-item bg-dark text-white border-secondary">Melee Damage: <span id="bat-damage-stat">+${weaponDamageBonus.bat}</span></li>`;
                 }
 
                 infoCard.style.display = 'block';
@@ -1179,7 +1413,12 @@
             const player = gameState.player;
             if (!player || player.hp <= 0) return;
 
-            let rawDamage = Math.floor(Math.random() * (enemyAttackDamage.max - enemyAttackDamage.min + 1)) + enemyAttackDamage.min;
+            // Get enemy type and use appropriate damage values
+            const enemy = gameState[attackerId];
+            const isSwordPunk = enemy && enemy.type === 'sword';
+            const damageRange = isSwordPunk ? swordPunkAttackDamage : enemyAttackDamage;
+
+            let rawDamage = Math.floor(Math.random() * (damageRange.max - damageRange.min + 1)) + damageRange.min;
 
             // Factor in player defense (reduce damage, minimum 1 damage)
             const damage = Math.max(1, rawDamage - player.defense);
@@ -1311,11 +1550,26 @@
             addMessage('VICTORY! All enemies defeated!', 'success');
 
             if (currentBattleEnemyCount > 0) {
-                playerInventory.bat = (playerInventory.bat || 0) + currentBattleEnemyCount;
+                // Calculate club punk count (non-sword enemies drop bats)
+                const clubPunkCount = currentBattleEnemyCount - currentBattleSwordPunkCount;
+
+                // Give bats from club punks
+                if (clubPunkCount > 0) {
+                    playerInventory.bat = (playerInventory.bat || 0) + clubPunkCount;
+                    const plural = clubPunkCount === 1 ? '' : 's';
+                    addMessage(`You recover ${clubPunkCount} bat${plural} from the defeated cyber punks.`, 'success');
+                }
+
+                // Give swords from sword punks
+                if (currentBattleSwordPunkCount > 0) {
+                    playerInventory.sword = (playerInventory.sword || 0) + currentBattleSwordPunkCount;
+                    const plural = currentBattleSwordPunkCount === 1 ? '' : 's';
+                    addMessage(`You recover ${currentBattleSwordPunkCount} sword${plural} from the defeated sword punks.`, 'success');
+                }
+
                 updateInventoryUI();
-                const plural = currentBattleEnemyCount === 1 ? '' : 's';
-                addMessage(`You recover ${currentBattleEnemyCount} bat${plural} from the defeated enemies.`, 'success');
                 currentBattleEnemyCount = 0;
+                currentBattleSwordPunkCount = 0;
             }
 
             // Disable all attack buttons
@@ -1341,9 +1595,12 @@
                     if (destination === 'streets') {
                         // Arrive at streets after victory
                         currentZone = 'streets';
+                        currentStreet = 'streets';
+                        updateAreaNameDisplay();
                         changeBackground('img/cyber-city-street.jpeg');
                         createLocationCard('hospital', 'Hospital', 'img/cyber-city-hospital-street.jpeg');
                         createLocationCard('cyber-market', 'Cyber Market', 'img/cyber-market.jpeg');
+                        createLocationCard('bus-stop', 'Bus Stop', 'img/cyber-bus-stop.jpeg');
                         updateLocationCardsVisibility();
                         updateCyberBatCard(); // Update info card visibility
                         addMessage('You arrive at the streets after the battle.', 'info');
@@ -1354,9 +1611,12 @@
                 } else if (currentZone === 'battle') {
                     // Fallback: if no destination, return to streets
                     currentZone = 'streets';
+                    currentStreet = 'streets';
+                    updateAreaNameDisplay();
                     changeBackground('img/cyber-city-street.jpeg');
                     createLocationCard('hospital', 'Hospital', 'img/cyber-city-hospital-street.jpeg');
                     createLocationCard('cyber-market', 'Cyber Market', 'img/cyber-market.jpeg');
+                    createLocationCard('bus-stop', 'Bus Stop', 'img/cyber-bus-stop.jpeg');
                     updateLocationCardsVisibility();
                     updateCyberBatCard(); // Update info card visibility
                     addMessage('You arrive at the streets after the battle.', 'info');
@@ -1411,17 +1671,37 @@
                     // Update flee button visibility (hide it since battle is over)
                     updateFleeButtonVisibility();
 
-                    // Player loses all gear when defeated (before fade to black)
+                    // Cyber punks steal player's bats and money when defeated (before fade to black)
+                    const player = gameState.player;
                     const lostBats = playerInventory.bat || 0;
+                    const lostSwords = playerInventory.sword || 0;
                     const lostStimPacks = playerInventory.stimPack || 0;
+                    const stolenCredits = player.credits > 0 ? player.credits : 0; // Only steal positive credits, keep debt
 
-                    // Store lost gear message to show after fade from black
-                    let lostGearMessage = null;
-                    if (lostBats > 0 || lostStimPacks > 0) {
-                        const lostItems = [];
-                        if (lostBats > 0) lostItems.push(`${lostBats} bat${lostBats > 1 ? 's' : ''}`);
-                        if (lostStimPacks > 0) lostItems.push(`${lostStimPacks} stim pack${lostStimPacks > 1 ? 's' : ''}`);
-                        lostGearMessage = `You lost your gear: ${lostItems.join(', ')}.`;
+                    // Store stolen items message to show after fade from black
+                    let stolenMessage = null;
+                    const stolenItems = [];
+                    if (lostBats > 0) {
+                        stolenItems.push(`${lostBats} bat${lostBats > 1 ? 's' : ''}`);
+                    }
+                    if (lostSwords > 0) {
+                        stolenItems.push(`${lostSwords} sword${lostSwords > 1 ? 's' : ''}`);
+                    }
+                    if (lostStimPacks > 0) {
+                        stolenItems.push(`${lostStimPacks} stim pack${lostStimPacks > 1 ? 's' : ''}`);
+                    }
+                    if (stolenCredits > 0) {
+                        stolenItems.push(`${Math.round(stolenCredits)} credits`);
+                    }
+
+                    if (stolenItems.length > 0) {
+                        stolenMessage = `The cyber punks stole your ${stolenItems.join(', ')}.`;
+                    }
+
+                    // Steal the money (set credits to 0 if positive, keep debt if negative)
+                    if (stolenCredits > 0) {
+                        player.credits = 0;
+                        updateCreditsDisplay();
                     }
 
                     // Fade to black
@@ -1441,10 +1721,12 @@
 
                         // Clear all inventory
                         playerInventory.bat = 0;
+                        playerInventory.sword = 0;
                         playerInventory.stimPack = 0;
 
                         // Unequip all weapons
                         equippedWeapons.bat = false;
+                        equippedWeapons.sword = false;
 
                         // Update inventory UI (this will hide the Cyber Bat card and inventory items)
                         updateInventoryUI();
@@ -1463,6 +1745,8 @@
 
                         // Bring player to hospital
                         currentZone = 'hospital';
+                        currentStreet = null; // Not on a street location
+                        updateAreaNameDisplay();
                         previousLocation = null;
                         pendingDestination = null;
 
@@ -1493,16 +1777,45 @@
                                 const player = gameState.player;
                                 const healCost = 10;
                                 player.credits -= healCost;
-                                player.hp = player.maxHp;
+
+                                // Calculate HP restored (from 0 to maxHp)
+                                const hpRestored = player.maxHp;
+
+                                // Track total HP healed for progressive max HP increases (need to heal current maxHp to level, but only gain 1 HP)
+                                player.totalHpHealed = (player.totalHpHealed || 0) + hpRestored;
+                                player.nextLevelThreshold = player.nextLevelThreshold || player.maxHp;
+
+                                // Check if we've healed enough to level up
+                                while (player.totalHpHealed >= player.nextLevelThreshold) {
+                                    const oldMaxHp = player.maxHp;
+                                    player.maxHp += 1; // Only increase by 1 HP per level
+                                    player.hp = player.maxHp; // Increase current HP to match new max HP
+                                    player.totalHpHealed -= player.nextLevelThreshold; // Subtract the threshold
+                                    player.nextLevelThreshold = player.maxHp; // Next level requires healing the new max HP
+
+                                    // Log max HP increase
+                                    addMessage(`Your maximum HP increased by 1! (${Math.round(oldMaxHp)} → ${Math.round(player.maxHp)})`, 'success');
+                                }
+
+                                // If no level up, just restore HP
+                                if (player.hp < player.maxHp) {
+                                    player.hp = player.maxHp;
+                                }
+
                                 updateCardHP('player');
                                 updateCreditsDisplay();
                                 const debt = Math.abs(player.credits);
                                 addMessage(`The hospital revives you and restores your health. You now owe ${debt} credits to the hospital.`, 'info');
 
-                                // Show lost gear message if any gear was lost
-                                if (lostGearMessage) {
+                                // Doctor says the same thing as opening
+                                setTimeout(() => {
+                                    addMessage('Doctor: "So do us both a favor… try not to die before you can settle the tab."', 'info');
+                                }, 500);
+
+                                // Show stolen items message if anything was stolen
+                                if (stolenMessage) {
                                     setTimeout(() => {
-                                        addMessage(lostGearMessage, 'warning');
+                                        addMessage(stolenMessage, 'warning');
                                     }, 300);
                                 }
 
@@ -1587,6 +1900,7 @@
                     <div class="list-group list-group-flush">
                         <button class="btn btn-primary w-100 rounded-0 mb-3 talk-merchant-btn" data-location-id="cyber-merchant" id="merchant-talk-btn">Talk</button>
                         <button class="btn btn-primary w-100 rounded-0 mb-3 sell-bat-btn" data-location-id="cyber-merchant" id="merchant-sell-bat-btn">Sell Bat (10)</button>
+                        <button class="btn btn-primary w-100 rounded-0 mb-3 sell-sword-btn" data-location-id="cyber-merchant" id="merchant-sell-sword-btn">Sell Sword (15)</button>
                         <button class="btn btn-primary w-100 rounded-0 mb-3 buy-bat-btn" data-location-id="cyber-merchant" id="merchant-buy-bat-btn">Buy Bat (20) <span class="merchant-count" id="merchant-bat-count">10</span></button>
                         <button class="btn btn-primary w-100 rounded-0 mb-3 buy-stim-pack-btn" data-location-id="cyber-merchant" id="merchant-buy-stim-pack-btn">Buy Stim Pack (15) <span class="merchant-count" id="merchant-stim-pack-count">10</span></button>
                     </div>
@@ -1623,9 +1937,9 @@
 
             wrapper.innerHTML = `
                 <div class="card bg-dark text-white border-dark" data-card-id="streets">
-                    <img src="img/cyber-city-street.jpeg" class="card-img-top" alt="The Streets">
+                    <img src="img/cyber-city-street.jpeg" class="card-img-top" alt="Grove Street">
                     <div class="card-body">
-                        <h5 class="card-title">The Streets</h5>
+                        <h5 class="card-title">Grove Street</h5>
                     </div>
                     <div class="list-group list-group-flush">
                         <button class="btn btn-primary w-100 rounded-0 mb-3 location-go-btn" data-location-id="streets">Go</button>
@@ -1662,14 +1976,20 @@
             // Do the healing first
             player.hp = player.maxHp;
 
-            // Track total HP healed for gradual max HP increases (1 HP per 100 HP healed)
+            // Track total HP healed for progressive max HP increases (need to heal current maxHp to level, but only gain 1 HP)
             player.totalHpHealed = (player.totalHpHealed || 0) + hpRestored;
-            const maxHpIncrease = Math.floor(player.totalHpHealed / 100);
+            player.nextLevelThreshold = player.nextLevelThreshold || player.maxHp;
 
-            if (maxHpIncrease > 0) {
-                player.maxHp += maxHpIncrease;
+            // Check if we've healed enough to level up
+            while (player.totalHpHealed >= player.nextLevelThreshold) {
+                const oldMaxHp = player.maxHp;
+                player.maxHp += 1; // Only increase by 1 HP per level
                 player.hp = player.maxHp; // Increase current HP to match new max HP
-                player.totalHpHealed = player.totalHpHealed % 100; // Keep remainder
+                player.totalHpHealed -= player.nextLevelThreshold; // Subtract the threshold
+                player.nextLevelThreshold = player.maxHp; // Next level requires healing the new max HP
+
+                // Log max HP increase
+                addMessage(`Your maximum HP increased by 1! (${Math.round(oldMaxHp)} → ${Math.round(player.maxHp)})`, 'success');
             }
 
             // Charge 10 credits per heal
@@ -1677,12 +1997,8 @@
             updateCardHP('player');
             updateCreditsDisplay();
 
-            // Show healing message first
-            if (maxHpIncrease > 0) {
-                addMessage(`The doctor heals you, restoring ${Math.round(hpRestored)} HP. Your maximum HP increased by ${maxHpIncrease}! (Max HP: ${Math.round(player.maxHp)})`, 'success');
-            } else {
-                addMessage(`The doctor heals you, restoring ${Math.round(hpRestored)} HP.`, 'success');
-            }
+            // Show healing message
+            addMessage(`The doctor heals you, restoring ${Math.round(hpRestored)} HP.`, 'success');
 
             // Then add the bill log message immediately after
             const debt = Math.abs(player.credits);
@@ -1747,6 +2063,42 @@
             addMessage(`You sold a bat for ${batPrice} credits! (Credits: ${player.credits})`, 'success');
         }
 
+        // Sell sword to merchant
+        function sellSwordToMerchant() {
+            const player = gameState.player;
+            const swordPrice = 15; // Credits per sword (more valuable than bat)
+
+            if (!playerInventory.sword || playerInventory.sword <= 0) {
+                addMessage('You don\'t have any swords to sell!', 'warning');
+                return;
+            }
+
+            // Remove one sword from player inventory
+            playerInventory.sword -= 1;
+
+            // If the sword is equipped and we now have 0, unequip it
+            if (isWeaponEquipped('sword') && playerInventory.sword <= 0) {
+                equippedWeapons.sword = false;
+                addMessage('You unequipped the sword.', 'info');
+            }
+
+            // Add sword to merchant inventory
+            merchantInventory.sword = (merchantInventory.sword || 0) + 1;
+
+            // Add credits
+            player.credits += swordPrice;
+
+            // Show weapon card when selling (visual feedback)
+            updateCyberBatCard();
+
+            // Update UI
+            updateInventoryUI();
+            updateCreditsDisplay();
+            updateMerchantUI();
+
+            addMessage(`You sold a sword for ${swordPrice} credits! (Credits: ${player.credits})`, 'success');
+        }
+
         // Update credits display (shows debt when negative)
         function updateCreditsDisplay() {
             const creditsElement = document.querySelector('.credits');
@@ -1788,6 +2140,19 @@
                     sellBatBtn.style.display = 'block';
                     // Update button text to show available bats
                     sellBatBtn.textContent = `Sell Bat (10) ${playerBatCount}`;
+                }
+            }
+
+            // Hide/show sell sword button based on player inventory and update count
+            const sellSwordBtn = document.getElementById('merchant-sell-sword-btn');
+            if (sellSwordBtn) {
+                const playerSwordCount = playerInventory.sword ?? 0;
+                if (playerSwordCount <= 0) {
+                    sellSwordBtn.style.display = 'none';
+                } else {
+                    sellSwordBtn.style.display = 'block';
+                    // Update button text to show available swords
+                    sellSwordBtn.textContent = `Sell Sword (15) ${playerSwordCount}`;
                 }
             }
 
@@ -1918,15 +2283,15 @@
             // Use one stim pack
             playerInventory.stimPack -= 1;
 
-            // Restore HP (stim pack restores 50 HP or to max, whichever is less)
-            const healAmount = Math.min(50, player.maxHp - player.hp);
-            player.hp = Math.min(player.maxHp, player.hp + 50);
+            // Restore HP to full (full heal)
+            const healAmount = player.maxHp - player.hp;
+            player.hp = player.maxHp; // Full heal to max HP
 
             // Update UI
             updateInventoryUI();
             updateCardHP('player');
 
-            addMessage(`You used a stim pack and restored ${Math.round(healAmount)} HP! (HP: ${Math.round(player.hp)}/${Math.round(player.maxHp)})`, 'success');
+            addMessage(`You used a stim pack and restored ${Math.round(healAmount)} HP! (Full heal: ${Math.round(player.hp)}/${Math.round(player.maxHp)})`, 'success');
         }
 
         // Spawn a specific number of enemies (for random encounters)
@@ -1934,27 +2299,38 @@
             const container = document.getElementById('enemy-cards-container');
             if (!container) return;
 
+            // Determine enemy type based on current street BEFORE setting it to null (sword punks only in downtown)
+            const streetBeforeBattle = currentStreet;
+            const enemyType = streetBeforeBattle === 'main-street' ? 'sword' : 'club';
+            const enemyHp = enemyType === 'sword' ? 120 : 100;
+
             // Clear container
             container.innerHTML = '';
             currentBattleEnemyCount = count;
+            // Track sword punks separately for sword drops
+            currentBattleSwordPunkCount = enemyType === 'sword' ? count : 0;
             currentZone = 'battle';
+            currentStreet = null; // Not on a street location during battle
+            updateAreaNameDisplay();
             updateCyberBatCard(); // Hide Cyber Doctor card when entering battle
 
-            // Change background to streets for street encounters
-            if (pendingDestination === null || pendingDestination === 'streets') {
+            // Change background based on current street or destination
+            if (streetBeforeBattle === 'main-street' || pendingDestination === 'main-street') {
+                changeBackground('img/downtown.jpeg');
+            } else if (pendingDestination === null || pendingDestination === 'streets') {
                 changeBackground('img/cyber-city-street.jpeg');
             }
 
             // Initialize enemies in game state
             for (let i = 1; i <= count; i++) {
                 const enemyId = `enemy${i}`;
-                gameState[enemyId] = { hp: 100, maxHp: 100 };
+                gameState[enemyId] = { hp: enemyHp, maxHp: enemyHp, type: enemyType };
             }
 
             // Create enemy cards
             for (let i = 1; i <= count; i++) {
                 const enemyId = `enemy${i}`;
-                createEnemyCard(enemyId, i);
+                createEnemyCard(enemyId, i, enemyType);
             }
 
             // Initialize HP displays
@@ -1982,6 +2358,8 @@
                     // No encounter, proceed to streets
                     addMessage('You arrive at the streets...', 'info');
                     currentZone = 'streets';
+                    currentStreet = 'streets';
+                    updateAreaNameDisplay();
 
                     // Fade out doctor card, merchant card, and streets card
                     const doctorCard = document.querySelector('[data-location-id="doctor"]');
@@ -1999,6 +2377,7 @@
                         changeBackground('img/cyber-city-street.jpeg');
                         createLocationCard('hospital', 'Hospital', 'img/cyber-city-hospital-street.jpeg');
                         createLocationCard('cyber-market', 'Cyber Market', 'img/cyber-market.jpeg');
+                        createLocationCard('bus-stop', 'Bus Stop', 'img/cyber-bus-stop.jpeg');
                         updateLocationCardsVisibility();
                         updateCyberBatCard(); // Hide Cyber Doctor card when leaving hospital
                     };
@@ -2019,6 +2398,21 @@
                 }
                 // If encounter happened, spawnRandomEnemies already handled it
                 return;
+            }
+
+            // Bus stop travel is handled by bus-stop-travel-btn event listener
+
+            // Bus stop travel charges are handled by bus-stop-travel-btn event listener
+            // Free returns are handled by location-go-btn with data-is-free="true"
+
+            // Set previousLocation before traveling (important for bus stop to know which street you came from)
+            if (locationId === 'bus-stop') {
+                // Store the current zone as previousLocation if it's a street location
+                if (STREET_LOCATIONS.find(s => s.id === currentZone)) {
+                    previousLocation = currentZone;
+                }
+            } else {
+                previousLocation = currentZone;
             }
 
             const locationName = getLocationDisplayName(locationId);
@@ -2136,6 +2530,7 @@
 
             // Initialize info card (shows Cyber Doctor at game start)
             updateCyberBatCard();
+            updateAreaNameDisplay();
 
             // Initialize HP displays for all enemies
             for (let i = 1; i <= NUM_ENEMIES; i++) {
@@ -2154,7 +2549,64 @@
                 // Handle location "Go" buttons
                 if (event.target.classList.contains('location-go-btn')) {
                     const locationId = event.target.getAttribute('data-location-id');
-                    visitLocation(locationId);
+                    const isFree = event.target.getAttribute('data-is-free') === 'true';
+                    // If it's free (Grove Street Bus Stop), go directly without charging
+                    if (isFree) {
+                        addMessage(`You walk back to ${getLocationDisplayName(locationId)}...`, 'info');
+                        previousLocation = currentZone;
+                        const locationCard = event.target.closest('[data-location-id]');
+                        const travel = () => {
+                            const encountered = maybeTriggerEncounter(locationId);
+                            if (!encountered) {
+                                arriveAtLocation(locationId);
+                            }
+                        };
+                        if (locationCard) {
+                            fadeOutAndRemove(locationCard, travel);
+                        } else {
+                            travel();
+                        }
+                    } else {
+                        visitLocation(locationId);
+                    }
+                }
+
+                // Handle bus stop travel buttons
+                if (event.target.classList.contains('bus-stop-travel-btn')) {
+                    const streetId = event.target.getAttribute('data-street-id');
+                    const streetName = event.target.getAttribute('data-street-name');
+                    const player = gameState.player;
+                    const busFare = 10;
+
+                    if (player.credits < busFare) {
+                        const debt = Math.abs(player.credits);
+                        addMessage(`You need ${busFare} credits for the bus fare, but you only have ${Math.round(player.credits)} credits (owe ${debt}).`, 'warning');
+                        return;
+                    }
+
+                    // Charge the bus fare
+                    player.credits -= busFare;
+                    updateCreditsDisplay();
+                    addMessage(`You pay ${busFare} credits for the bus fare.`, 'info');
+
+                    // Travel to the street location
+                    addMessage(`You board the bus to ${streetName}...`, 'info');
+                    previousLocation = currentZone;
+
+                    // Find the card that was clicked (the bus stop destination card)
+                    const locationCard = event.target.closest('[data-location-id]');
+                    const travel = () => {
+                        const encountered = maybeTriggerEncounter(streetId);
+                        if (!encountered) {
+                            arriveAtLocation(streetId);
+                        }
+                    };
+
+                    if (locationCard) {
+                        fadeOutAndRemove(locationCard, travel);
+                    } else {
+                        travel();
+                    }
                 }
 
                 // Handle "Heal" button (now automatic, but keep for compatibility)
@@ -2165,6 +2617,11 @@
                 // Handle "Sell Bat" button
                 if (event.target.classList.contains('sell-bat-btn')) {
                     sellBat();
+                }
+
+                // Handle "Sell Sword" button
+                if (event.target.classList.contains('sell-sword-btn')) {
+                    sellSwordToMerchant();
                 }
 
                 // Handle "Buy Bat" button
